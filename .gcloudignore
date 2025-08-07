@@ -1,0 +1,24 @@
+
+# This file specifies files that are *not* uploaded to Google Cloud Build.
+# It is similar to .gitignore, but for Cloud Build.
+
+# Exclude backend files
+backend/
+
+# Include necessary frontend files and directories
+!index.html
+!index.tsx
+!index.css
+!package.json
+!package-lock.json
+!vite.config.ts
+!tsconfig.json
+!firebaseConfig.ts
+!dist/
+
+# Default exclusions
+.gcloudignore
+.git
+.gitignore
+.env
+node_modules/
