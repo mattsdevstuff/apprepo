@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI YouTube Shorts Creator</title>
+  <script src="https://js.stripe.com/v3/"></script>
   <script type="importmap">
   {
     "imports": {
@@ -33,6 +34,8 @@
    <div class="user-info-display">
     <img id="user-profile-picture" src="" alt="User Profile Picture">
     <span id="user-name"></span>
+    <span id="credit-balance-display"></span>
+    <button id="buy-credits-button">Buy Credits</button>
     <button id="sign-out-button">Sign Out</button>
    </div>
   </div>
@@ -338,6 +341,31 @@
       </div>
       <div class="modal-actions">
         <button id="error-modal-close" class="action-button">Close</button>
+      </div>
+    </div>
+  </div>
+  <div id="credits-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <h2 class="modal-title">Buy Credits</h2>
+      <div class="credit-packages">
+        <div class="credit-package">
+          <h3>Starter Pack</h3>
+          <p>500 Credits</p>
+          <button class="buy-button" data-price-id="YOUR_STARTER_PRICE_ID">Buy for $5</button>
+        </div>
+        <div class="credit-package">
+          <h3>Creator Pack</h3>
+          <p>1100 Credits</p>
+          <button class="buy-button" data-price-id="YOUR_CREATOR_PRICE_ID">Buy for $10</button>
+        </div>
+        <div class="credit-package">
+          <h3>Producer Pack</h3>
+          <p>2500 Credits</p>
+          <button class="buy-button" data-price-id="YOUR_PRODUCER_PRICE_ID">Buy for $20</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="credits-cancel-button" class="action-button secondary">Cancel</button>
       </div>
     </div>
   </div>
