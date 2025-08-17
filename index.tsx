@@ -8,6 +8,7 @@ import { app } from './firebaseConfig';
 // --- Type Definitions ---
 interface GeneratedVideo {
   video?: {
+
     uri?: string;
   };
 }
@@ -79,6 +80,8 @@ let currentTool: 'select' | 'split' = 'select';
 
 // Auth State
 const auth = getAuth(app);
+
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 // New track state
 let tracks: Track[] = [
@@ -229,7 +232,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const buyButtons = creditsModal?.querySelectorAll<HTMLButtonElement>('.buy-button');
 
   // Assuming you have callable functions set up:
-  import { getFunctions, httpsCallable } from 'firebase/functions';
   const functions = getFunctions(app);
   const getCredits = httpsCallable(functions, 'getCredits');
   const createCheckoutSession = httpsCallable(functions, 'createCheckoutSession');
@@ -2257,7 +2259,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (sessionId) {
                     const stripe = (window as any).Stripe('YOUR_STRIPE_PUBLIC_KEY'); // Replace with your public key
                     stripe.redirectToCheckout({ sessionId: sessionId });
-                } else {
+ } else {
                     throw new Error('Failed to get checkout session ID.');
                 }
             } catch (error) {
