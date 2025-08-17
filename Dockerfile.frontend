@@ -13,13 +13,6 @@ RUN npm install
 # Copy the rest of the frontend application code
 COPY . .
 
-# --- DEBUG STEP: List contents of /app to verify index.html is present ---
-RUN ls -l /app
-# -----------------------------------------------------------------------
-
-# Build the frontend
-RUN npm run build
-
 # Install serve to serve the static files
 RUN npm install -g serve
 
@@ -29,3 +22,13 @@ EXPOSE 8080
 # Command to run the application
 # Serve the built files from the 'dist' directory
 CMD ["serve", "-s", "dist", "-l", "8080"]
+
+# Set the entrypoint to run the serve command
+ENTRYPOINT ["serve", "-s", "dist", "-l", "8080"]
+
+# Build the frontend - This step is placed after installing serve to ensure serve is available in the build environment if needed for any build-related tasks, although in this case it's primarily for the final image.
+# It also ensures that the dist directory is created before the CMD/ENTRYPOINT that depends on it.
+RUN npm run build
+
+
+
