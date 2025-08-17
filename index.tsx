@@ -124,6 +124,11 @@ window.addEventListener('DOMContentLoaded', () => {
   const headerAuthStatus = document.querySelector<HTMLDivElement>('.header-auth-status'); // Select the new container
   const authSection = document.querySelector<HTMLDivElement>('#auth-section');
 
+  // Add new element references
+  const creditBalanceDisplay = document.querySelector<HTMLSpanElement>('#credit-balance-display');
+  const buyCreditsButton = document.querySelector<HTMLButtonElement>('#buy-credits-button');
+  const creditsModal = document.querySelector<HTMLDivElement>('#credits-modal');
+
   console.log('headerAuthStatus element:', headerAuthStatus);
 
   const userInfoDisplay = document.querySelector<HTMLDivElement>('.user-info-display');
@@ -219,6 +224,15 @@ window.addEventListener('DOMContentLoaded', () => {
   const errorModalBody = document.querySelector<HTMLDivElement>('#error-modal-body');
   const errorModalClose = document.querySelector<HTMLButtonElement>('#error-modal-close');
 
+  // Credit Modal elements
+  const creditsCancelButton = document.querySelector<HTMLButtonElement>('#credits-cancel-button');
+  const buyButtons = creditsModal?.querySelectorAll<HTMLButtonElement>('.buy-button');
+
+  // Assuming you have callable functions set up:
+  import { getFunctions, httpsCallable } from 'firebase/functions';
+  const functions = getFunctions(app);
+  const getCredits = httpsCallable(functions, 'getCredits');
+  const createCheckoutSession = httpsCallable(functions, 'createCheckoutSession');
   // Resizers
   const resizerV1 = document.querySelector<HTMLDivElement>('#resizer-v1');
   const resizerV2 = document.querySelector<HTMLDivElement>('#resizer-v2');
@@ -2126,6 +2140,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Auth Listeners (Moved inside DOMContentLoaded)
   setTimeout(() => {
       const googleSignInButton = document.querySelector<HTMLButtonElement>('#google-sign-in-button');
+      // Ensure these are selected correctly now they are potentially inside a larger element
       const signOutButton = document.querySelector<HTMLButtonElement>('#sign-out-button');
       const userNameEl = document.querySelector<HTMLSpanElement>('#user-name');
       const authSection = document.querySelector<HTMLDivElement>('#auth-section');
@@ -2138,7 +2153,8 @@ window.addEventListener('DOMContentLoaded', () => {
       }
 
       // Auth State Change Listener
-      onAuthStateChanged(auth, (user) => {
+      onAuthStateChanged(auth, async (user) => { // Made the function async
+          // Check if the required DOM elements are available before proceeding
           if (user && userInfoDisplay && userNameEl && authSection) {
               console.log('User photoURL:', user.photoURL);
               console.log('User is signed in:', user.uid);
@@ -2160,6 +2176,17 @@ window.addEventListener('DOMContentLoaded', () => {
                       }
                   }).catch(console.error);
               }
+
+          // Fetch and display credits
+          if (user && creditBalanceDisplay) {
+              try {
+                  const result = await getCredits();
+                  const credits = (result.data as any)?.credits || 0;
+                  creditBalanceDisplay.textContent = `Credits: ${credits}`;
+              } catch (error) {
+                  console.error('Error fetching credits:', error);
+              }
+          }
               if (userInfoDisplay) userInfoDisplay.style.display = 'flex';
               if (userNameEl) userNameEl.textContent = `Welcome, ${user.displayName || user.email || 'User'}`;
               if (authSection) authSection.style.display = 'none';
@@ -2169,6 +2196,16 @@ window.addEventListener('DOMContentLoaded', () => {
                 userProfilePictureEl.style.display = 'block';
               }
               if (signOutButton) signOutButton.addEventListener('click', () => signOut(auth));
+
+              // Show credit display and buy credits button if authenticated
+              if (creditBalanceDisplay) {
+                creditBalanceDisplay.style.display = 'inline-block';
+              }
+              if (buyCreditsButton) {
+                buyCreditsButton.style.display = 'inline-block';
+              }
+
+
           } else {
               console.log('User is signed out');
               if (userInfoDisplay) userInfoDisplay.style.display = 'none'; // Ensure this is hidden
@@ -2180,6 +2217,53 @@ window.addEventListener('DOMContentLoaded', () => {
                 userProfilePictureEl.style.display = 'none'; // Hide the image element
               }
           }
+           // Hide credit display and buy credits button if signed out
+            if (creditBalanceDisplay) {
+                creditBalanceDisplay.style.display = 'none';
+            }
+            if (buyCreditsButton) {
+                buyCreditsButton.style.display = 'none';
+            }
  });
     }, 0); // Add a small timeout to ensure DOM is fully ready
+
+    // Add event listeners for the credits modal
+    buyCreditsButton?.addEventListener('click', () => {
+        if (creditsModal) {
+            creditsModal.style.display = 'flex';
+        }
+    });
+
+    creditsCancelButton?.addEventListener('click', () => {
+        if (creditsModal) {
+            creditsModal.style.display = 'none';
+        }
+    });
+
+    buyButtons?.forEach(button => {
+        button.addEventListener('click', async () => {
+            const priceId = button.dataset.priceId;
+            if (!priceId) {
+                console.error('Price ID not found on buy button');
+                displayError('Could not initiate checkout: Price ID is missing.');
+                return;
+            }
+
+            try {
+                // Call the createCheckoutSession function
+                const session = await createCheckoutSession({ priceId });
+                const sessionId = (session.data as any)?.id;
+
+                if (sessionId) {
+                    const stripe = (window as any).Stripe('YOUR_STRIPE_PUBLIC_KEY'); // Replace with your public key
+                    stripe.redirectToCheckout({ sessionId: sessionId });
+                } else {
+                    throw new Error('Failed to get checkout session ID.');
+                }
+            } catch (error) {
+                console.error('Error creating checkout session:', error);
+                displayError(`Failed to initiate checkout: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        });
+    });
   });
