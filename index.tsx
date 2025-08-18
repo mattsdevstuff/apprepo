@@ -117,6 +117,7 @@ function sleep(ms: number) {
 
 // --- App Initialization ---
 window.addEventListener('DOMContentLoaded', () => {
+  console.log('DOMContentLoaded fired.');
   document.title = 'AI YouTube Shorts Creator';
 
   // --- DOM Element References ---
@@ -2141,6 +2142,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Auth Listeners (Moved inside DOMContentLoaded)
   setTimeout(() => {
+ console.log('Attaching onAuthStateChanged listener.');
       const googleSignInButton = document.querySelector<HTMLButtonElement>('#google-sign-in-button');
       // Ensure these are selected correctly now they are potentially inside a larger element
       const signOutButton = document.querySelector<HTMLButtonElement>('#sign-out-button');
@@ -2156,35 +2158,38 @@ window.addEventListener('DOMContentLoaded', () => {
 
       // Auth State Change Listener
       onAuthStateChanged(auth, async (user) => { // Made the function async
-          // Check if the required DOM elements are available before proceeding
+          console.log('Auth state changed. User:', user);
+          // Check if the required DOM elements and user are available before proceeding
           if (user && userInfoDisplay && userNameEl && authSection) {
               console.log('User photoURL:', user.photoURL);
               console.log('User is signed in:', user.uid);
-
+              //
               // Check if displayName or photoURL are missing and attempt to update
-              if (!user.displayName || !user.photoURL) {
-                  console.log('User profile incomplete, attempting to update...');
-                  user.updateProfile({
-                      displayName: user.displayName || user.email || 'User', // Use email if displayName is missing
-                      photoURL: user.photoURL || undefined // Undefined will not update the photoURL
-                  })
-                  .then(() => {
-                      console.log('User profile updated successfully.');
-                      // Force a UI update after profile is potentially updated
-                      if (userNameEl) userNameEl.textContent = `Welcome, ${user.displayName || user.email || 'User'}`;
-                      if (userProfilePictureEl) {
-                          userProfilePictureEl.src = user.photoURL || 'pfp.png';
-                          userProfilePictureEl.style.display = 'block';
-                      }
-                  }).catch(console.error);
-              }
+              // if (!user.displayName || !user.photoURL) {
+              //     console.log('User profile incomplete, attempting to update...');
+              //     user.updateProfile({
+              //         displayName: user.displayName || user.email || 'User', // Use email if displayName is missing
+              //         photoURL: user.photoURL || undefined // Undefined will not update the photoURL
+              //     })
+              //     .then(() => {
+              //         console.log('User profile updated successfully.');
+              //         // Force a UI update after profile is potentially updated
+              //         if (userNameEl) userNameEl.textContent = `Welcome, ${user.displayName || user.email || 'User'}`;
+              //         if (userProfilePictureEl) {
+              //             userProfilePictureEl.src = user.photoURL || 'pfp.png';
+              //             userProfilePictureEl.style.display = 'block';
+              //         }
+              //     }).catch(console.error);
+              // }
 
           // Fetch and display credits
           if (user && creditBalanceDisplay) {
               try {
+                  console.log('Attempting to fetch credits...');
                   const result = await getCredits();
                   const credits = (result.data as any)?.credits || 0;
                   creditBalanceDisplay.textContent = `Credits: ${credits}`;
+                  console.log('Successfully fetched credits:', result);
               } catch (error) {
                   console.error('Error fetching credits:', error);
               }
@@ -2219,13 +2224,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 userProfilePictureEl.style.display = 'none'; // Hide the image element
               }
           }
-           // Hide credit display and buy credits button if signed out
-            if (creditBalanceDisplay) {
-                creditBalanceDisplay.style.display = 'none';
-            }
-            if (buyCreditsButton) {
-                buyCreditsButton.style.display = 'none';
-            }
+
  });
     }, 0); // Add a small timeout to ensure DOM is fully ready
 
