@@ -172,15 +172,23 @@ header p {
   display: none; 
 }
 
+/* New styles for Credit Balance and Buy Credits button */
 #credit-balance-display {
   font-size: 0.9rem;
-  color: var(--accent-color);
   font-weight: 500;
+  background-color: var(--surface-color);
+  padding: 0.6rem 1rem;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  color: var(--text-color); /* Use text color for display */
+  /* Ensure it doesn't look interactive */
+  cursor: default;
+  user-select: none;
 }
 
 #buy-credits-button {
-    background-color: var(--surface-color);
-    border: 1px solid var(--border-color);
+    /* Style as a prominent action button */
+    background-color: var(--accent-color);
     color: var(--text-color);
     padding: 0.6rem 1rem;
     border-radius: var(--border-radius);
@@ -189,6 +197,14 @@ header p {
     cursor: pointer;
     transition: all 0.2s;
 }
+
+#buy-credits-button:hover:not(:disabled),
+#sign-out-button:hover:not(:disabled) { /* Assuming sign-out uses similar interaction */
+    border-color: var(--accent-color); /* You might want a different hover for sign-out */
+    background-color: var(--accent-color);
+    color: white;
+}
+
 #sign-out-button {
     background-color: var(--surface-color);
     border: 1px solid var(--border-color);

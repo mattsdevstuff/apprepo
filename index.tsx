@@ -1,49 +1,14 @@
 /**
  * @license
- * Copyright 2025 Google LLC
+ * Copyright 2024 Google LLC
  * SPDX-License-Identifier: Apache-2.0
  */
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
-import { app } from './firebaseConfig';
-// --- Type Definitions ---
-interface GeneratedVideo {
-  video?: {
+import { initializeEditor } from './editor';
+import {
+  imageBase64, imageMimeType, timelineOverlays, nextOverlayId, sequenceDuration, savedClips, nextClipId, newClipsCount, timelineClips, currentClipInPreview, isSeeking, dropIndex, selectedClipId, selectedOverlayId, draggedTimelineClipId, projectAspectRatio, currentTool, tracks, nextTrackId, 
+  type GeneratedVideo, type TrackType, type Track, type TextOverlay, type SavedClip, type TimelineClip
+} from './state';
 
-    uri?: string;
-  };
-}
-
-type TrackType = 'video' | 'text';
-
-interface Track {
-    id: number;
-    type: TrackType;
-}
-
-interface TextOverlay {
-  id: number;
-  trackId: number;
-  text: string;
-  start: number;
-  end: number;
-  element: HTMLDivElement;
-  clipElement: HTMLDivElement;
-  // New properties for customization
-  fontSize: number; // A value from 10-100, used for responsive calculation
-  fontFamily: string;
-  color: string;
-  position: {
-    top: string; // e.g. '50%'
-    left: string; // e.g. '50%'
-  };
-}
-
-interface SavedClip {
-  id: number;
-  url: string;
-  blob: Blob;
-}
-interface TimelineClip extends SavedClip {
     trackId: number;
     start: number;
     end: number;
@@ -59,7 +24,9 @@ interface TimelineClip extends SavedClip {
     }
 }
 
-// --- State ---
+// Assuming these are staying in utils
+import { blobToBase64, formatTime, sleep } from './utils';
+// Assuming these are staying in utils
 let imageBase64 = '';
 let imageMimeType = '';
 let timelineOverlays: TextOverlay[] = [];
@@ -77,11 +44,10 @@ let selectedOverlayId: number | null = null;
 let draggedTimelineClipId: number | null = null;
 let projectAspectRatio = '9:16';
 let currentTool: 'select' | 'split' = 'select';
-
-// Auth State
-const auth = getAuth(app);
-
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { auth, initializeAuth } from './auth';
+import { app } from './firebaseConfig'; // Assuming firebaseConfig is in the same directory
+import { initializeModals } from './modals'; // Assuming modals.ts is in the same directory
+import { initializeGenerator } from './generator';
 
 // New track state
 let tracks: Track[] = [
@@ -129,9 +95,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const authSection = document.querySelector<HTMLDivElement>('#auth-section');
 
   // Add new element references
-  const creditBalanceDisplay = document.querySelector<HTMLSpanElement>('#credit-balance-display');
-  const buyCreditsButton = document.querySelector<HTMLButtonElement>('#buy-credits-button');
-  const creditsModal = document.querySelector<HTMLDivElement>('#credits-modal');
 
   console.log('headerAuthStatus element:', headerAuthStatus);
 
@@ -139,26 +102,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const userNameEl = document.querySelector<HTMLSpanElement>('#user-name');
   const signOutButton = document.querySelector<HTMLButtonElement>('#sign-out-button');
   // Generator View
-  const userProfilePictureEl = document.querySelector<HTMLImageElement>('#user-profile-picture');
-  const generatorView = document.querySelector<HTMLDivElement>('#generator-view');
-  const ideaInputEl = document.querySelector<HTMLTextAreaElement>('#idea-input');
-  // Hide profile picture by default until user is logged in
-  if (userProfilePictureEl) userProfilePictureEl.style.display = 'none';
-
-  console.log('Profile picture element:', userProfilePictureEl);
-  const promptEl = document.querySelector<HTMLTextAreaElement>('#prompt-input');
-  const fileInput = document.querySelector<HTMLInputElement>('#file-input');
-  const imagePreviewContainer = document.querySelector<HTMLDivElement>('#image-preview-container');
-  const imagePreview = document.querySelector<HTMLImageElement>('#image-preview');
-  const clearImageButton = document.querySelector<HTMLButtonElement>('#clear-image-button');
-  const generateButton = document.querySelector<HTMLButtonElement>('#generate-button');
-  const statusEl = document.querySelector<HTMLDivElement>('#status');
-  const resultsGallery = document.querySelector<HTMLDivElement>('#results-gallery');
-  const galleryPlaceholder = document.querySelector<HTMLDivElement>('#gallery-placeholder');
-  const quotaErrorEl = document.querySelector<HTMLDivElement>('#quota-error');
-  const controlsContainer = document.querySelector<HTMLDivElement>('.controls');
-  const generateIdeasButton = document.querySelector<HTMLButtonElement>('#generate-ideas-button');
-
 
   // Editor View
   const editorView = document.querySelector<HTMLDivElement>('#editor-view');
@@ -169,13 +112,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const mediaBin = document.querySelector<HTMLDivElement>('#media-bin');
   const uploadVideoInput = document.querySelector<HTMLInputElement>('#upload-video-input');
   const editorPlaceholder = document.querySelector<HTMLDivElement>('#editor-placeholder');
-  const videoPreviewWrapper = document.querySelector<HTMLDivElement>('#video-preview-wrapper');
-  const videoPreview = document.querySelector<HTMLVideoElement>('#video-preview');
-  const playPauseButton = document.querySelector<HTMLButtonElement>('#play-pause-button');
-  const playIcon = document.querySelector<HTMLElement>('#play-icon');
-  const pauseIcon = document.querySelector<HTMLElement>('#pause-icon');
-  const currentTimeEl = document.querySelector<HTMLSpanElement>('#current-time');
-  const totalDurationEl = document.querySelector<HTMLSpanElement>('#total-duration');
   const addTextButton = document.querySelector<HTMLButtonElement>('#add-text-button');
   const exportVideoButton = document.querySelector<HTMLButtonElement>('#export-video-button');
   const selectToolButton = document.querySelector<HTMLButtonElement>('#select-tool-button');
@@ -192,70 +128,9 @@ window.addEventListener('DOMContentLoaded', () => {
   const addVideoTrackButton = document.querySelector<HTMLButtonElement>('#add-video-track-button');
   const addTextTrackButton = document.querySelector<HTMLButtonElement>('#add-text-track-button');
 
-
-  // Properties Panel
-  const propertiesPlaceholder = document.querySelector<HTMLDivElement>('#properties-placeholder');
-  const textProperties = document.querySelector<HTMLDivElement>('#text-properties');
-  const propTextContent = document.querySelector<HTMLTextAreaElement>('#prop-text-content');
-  const propFontFamily = document.querySelector<HTMLSelectElement>('#prop-font-family');
-  const propFontColor = document.querySelector<HTMLInputElement>('#prop-font-color');
-  const propFontSize = document.querySelector<HTMLInputElement>('#prop-font-size');
-  const propFontSizeValue = document.querySelector<HTMLSpanElement>('#prop-font-size-value');
-
-  // Video Properties Panel
-  const videoProperties = document.querySelector<HTMLDivElement>('#video-properties');
-  const propVideoVolume = document.querySelector<HTMLInputElement>('#prop-video-volume');
-  const propVideoVolumeValue = document.querySelector<HTMLSpanElement>('#prop-video-volume-value');
-  const propVideoScale = document.querySelector<HTMLInputElement>('#prop-video-scale');
-  const propVideoScaleValue = document.querySelector<HTMLSpanElement>('#prop-video-scale-value');
-  const propVideoPosX = document.querySelector<HTMLInputElement>('#prop-video-pos-x');
-  const propVideoPosXValue = document.querySelector<HTMLSpanElement>('#prop-video-pos-x-value');
-  const propVideoPosY = document.querySelector<HTMLInputElement>('#prop-video-pos-y');
-  const propVideoPosYValue = document.querySelector<HTMLSpanElement>('#prop-video-pos-y-value');
-  const propVideoRotation = document.querySelector<HTMLInputElement>('#prop-video-rotation');
-  const propVideoRotationValue = document.querySelector<HTMLSpanElement>('#prop-video-rotation-value');
-  const resetTransformButton = document.querySelector<HTMLButtonElement>('#reset-transform-button');
-
-  // Sequence Settings Modal
-  const settingsModal = document.querySelector<HTMLDivElement>('#settings-modal');
-  const sequenceSettingsButton = document.querySelector<HTMLButtonElement>('#sequence-settings-button');
-  const settingsSaveButton = document.querySelector<HTMLButtonElement>('#settings-save-button');
-  const settingsCancelButton = document.querySelector<HTMLButtonElement>('#settings-cancel-button');
-  const settingDuration = document.querySelector<HTMLInputElement>('#setting-duration');
-
-  // Error Modal
-  const errorModal = document.querySelector<HTMLDivElement>('#error-modal');
-  const errorModalBody = document.querySelector<HTMLDivElement>('#error-modal-body');
-  const errorModalClose = document.querySelector<HTMLButtonElement>('#error-modal-close');
-
-  // Credit Modal elements
-  const creditsCancelButton = document.querySelector<HTMLButtonElement>('#credits-cancel-button');
-  const buyButtons = creditsModal?.querySelectorAll<HTMLButtonElement>('.buy-button');
-
-  // Assuming you have callable functions set up:
-  const functions = getFunctions(app);
-  const getCredits = httpsCallable(functions, 'getCredits');
-  const createCheckoutSession = httpsCallable(functions, 'createCheckoutSession');
-  // Resizers
-  const resizerV1 = document.querySelector<HTMLDivElement>('#resizer-v1');
-  const resizerV2 = document.querySelector<HTMLDivElement>('#resizer-v2');
   const resizerH = document.querySelector<HTMLDivElement>('#resizer-h');
 
   // --- UI Logic ---
-  function setUILoading(isLoading: boolean) {
-    if (generateButton) generateButton.disabled = isLoading;
-    controlsContainer?.querySelectorAll('input, textarea, select, button').forEach(el => (el as HTMLInputElement).disabled = isLoading);
-    
-    if (isLoading && statusEl) {
-      statusEl.innerHTML = `
-        <div>
-          <div class="loader"></div>
-          <p>Generating video, please wait...</p>
-          <p style="font-size: 0.9em; color: var(--text-muted-color)">(This may take a minute or two)</p>
-        </div>`;
-      statusEl.style.display = 'flex';
-    }
-  }
 
   function displayError(message: string) {
       // Also show a simple inline status message
@@ -322,15 +197,11 @@ window.addEventListener('DOMContentLoaded', () => {
       if (errorModalBody) errorModalBody.innerHTML = body + suggestionsHTML;
       const modalTitle = errorModal?.querySelector('.modal-title');
       if (modalTitle) (modalTitle as HTMLElement).innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color: var(--error-color);"></i> ${title}`;
-      if (errorModal) errorModal.style.display = 'flex';
-  }
 
   function switchView(viewId: 'generator-view' | 'editor-view') {
     if (viewId === 'generator-view') {
-      if (generatorView) generatorView.style.display = 'block';
       if (editorView) editorView.style.display = 'none';
       generatorTabButton?.classList.add('active');
-      studioTabButton?.classList.remove('active');
     } else {
       if (generatorView) generatorView.style.display = 'none';
       if (editorView) editorView.style.display = 'flex';
@@ -342,263 +213,6 @@ window.addEventListener('DOMContentLoaded', () => {
       renderTimelineTracks();
     }
     document.body.classList.toggle('generator-active', viewId === 'generator-view');
-  }
-
-  function createVideoCard(savedClip: SavedClip): HTMLDivElement {
-      const videoContainer = document.createElement('div');
-      videoContainer.className = 'video-container';
-
-      const videoEl = document.createElement('video');
-      videoEl.src = savedClip.url;
-      videoEl.autoplay = true;
-      videoEl.loop = true;
-      videoEl.controls = false;
-      videoEl.muted = true;
-
-      const actionsContainer = document.createElement('div');
-      actionsContainer.className = 'video-actions';
-
-      const downloadBtn = document.createElement('button');
-      downloadBtn.innerText = 'Download';
-      downloadBtn.className = 'video-action-button';
-      downloadBtn.onclick = () => {
-          const a = document.createElement('a');
-          a.href = savedClip.url;
-          a.download = `video-${Date.now()}.mp4`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-      };
-
-      const addToStudioBtn = document.createElement('button');
-      addToStudioBtn.innerText = 'Add to Editor';
-      addToStudioBtn.className = 'video-action-button add-to-editor-btn';
-      addToStudioBtn.dataset.clipId = String(savedClip.id);
-
-      if (savedClips.some(c => c.id === savedClip.id)) {
-          addToStudioBtn.innerText = 'Added ✓';
-          addToStudioBtn.disabled = true;
-      }
-
-      addToStudioBtn.onclick = () => {
-          if (!savedClips.some(c => c.id === savedClip.id)) {
-              savedClips.push(savedClip);
-              newClipsCount++;
-              updateStudioNotification();
-          }
-          
-          document.querySelectorAll(`.add-to-editor-btn[data-clip-id='${savedClip.id}']`).forEach(btn => {
-              (btn as HTMLButtonElement).innerText = 'Added ✓';
-              (btn as HTMLButtonElement).disabled = true;
-          });
-      };
-
-      actionsContainer.appendChild(downloadBtn);
-      actionsContainer.appendChild(addToStudioBtn);
-      videoContainer.appendChild(videoEl);
-      videoContainer.appendChild(actionsContainer);
-      return videoContainer;
-  }
-
-
-  async function handleGenerationSuccess(videos: GeneratedVideo[]) {
-      if (galleryPlaceholder) galleryPlaceholder.style.display = 'none';
-      
-      if (statusEl) {
-        statusEl.innerHTML = '';
-        statusEl.style.display = 'block';
-      }
-
-      if (videos.length === 0) {
-          if (statusEl) statusEl.innerHTML = '<p>No videos were generated. Please try a different prompt.</p>';
-          return;
-      }
-
-      for (const v of videos) {
-          try {
-              const uri = v.video?.uri;
-              if (!uri) {
-                  throw new Error(`Video is missing a URI.`);
-              }
-
-              const url = decodeURIComponent(uri);
-              const res = await fetch(url);
-              if (!res.ok) throw new Error(`Failed to fetch video: ${res.statusText}`);
-              const blob = await res.blob();
-              const objectURL = URL.createObjectURL(blob);
-
-              const newSavedClip: SavedClip = { id: nextClipId++, url: objectURL, blob };
-
-              const latestCard = createVideoCard(newSavedClip);
-              statusEl?.appendChild(latestCard);
-
-              const libraryCard = createVideoCard(newSavedClip);
-              resultsGallery?.prepend(libraryCard);
-
-          } catch (error) {
-              console.error(`Error processing video:`, error);
-              const message = error instanceof Error ? error.message : 'Unknown error';
-              const errorEl = document.createElement('p');
-              errorEl.textContent = `Could not load video. (${message})`;
-              errorEl.className = 'error';
-              resultsGallery?.prepend(errorEl.cloneNode(true));
-              statusEl?.appendChild(errorEl.cloneNode(true));
-          }
-      }
-  }
-
-
-  // --- API Calls (Now proxied through our backend) ---
-  async function generateContentApi(): Promise<GeneratedVideo[]> {
-      const promptText = promptEl?.value || '';
-
-      try {
-          // 1. Start the generation via our backend
-          console.log('[BFF] Sending generation request to server...');
-          const startResponse = await fetch('/api/generate-video', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  prompt: promptText,
-                  imageBase64: imageBase64,
-                  aspectRatio: projectAspectRatio,
-              }),
-          });
-
-          if (!startResponse.ok) {
-              const errorData = await startResponse.json().catch(() => ({}));
-              throw new Error(`Server Error (${startResponse.status}): ${errorData?.error?.message || startResponse.statusText}`);
-          }
-
-          const { pollUrl } = await startResponse.json();
-          if (!pollUrl) {
-              throw new Error("Server did not return a valid poll URL.");
-          }
-          
-          console.log(`[BFF] Video generation started. Polling at: ${pollUrl}`);
-
-          // 2. Poll our backend for the result
-          let result: any;
-          let pollCount = 0;
-          const maxPolls = 60; // Poll for a max of 5 minutes (60 polls * 5s interval)
-          const pollInterval = 5000;
-          
-          while (pollCount < maxPolls) {
-              pollCount++;
-
-              const pollStatus = `Generation in progress... (Polling ${pollCount}/${maxPolls})`;
-              console.log(`[BFF] ${pollStatus}`);
-              const statusPara = statusEl?.querySelector('p');
-              if (statusPara) {
-                  statusPara.textContent = pollStatus;
-              }
-
-              const pollResponse = await fetch(pollUrl);
-
-              if (!pollResponse.ok) {
-                  const errorData = await pollResponse.json().catch(() => ({}));
-                  throw new Error(`Polling failed (${pollResponse.status}): ${errorData?.error?.message || pollResponse.statusText}`);
-              }
-
-              result = await pollResponse.json();
-
-              if (result.done) {
-                  console.log("[BFF] Polling complete. Operation finished.", result);
-
-                  if (result.error) {
-                      throw new Error(`Video generation failed: ${result.error.message || 'Unknown error'}`);
-                  }
-                  
-                  const videos = result.response?.generatedVideos || [];
-
-                  if (videos.length === 0) {
-                      throw new Error("API operation finished but returned no videos. The prompt may have been filtered for safety.");
-                  }
-
-                  console.log(`[BFF] Successfully received ${videos.length} video(s).`);
-                  return videos;
-              }
-
-              await sleep(pollInterval);
-          }
-
-          throw new Error(`Video generation timed out after ${maxPolls * pollInterval / 1000 / 60} minutes.`);
-
-      } catch (error) {
-          console.error("[BFF] API Call failed.", error);
-          throw error;
-      }
-  }
-
-
-  // --- Main Handlers (Generator) ---
-  async function handleGenerateIdeasClick() {
-      if (!ideaInputEl) return;
-      const idea = ideaInputEl.value.trim();
-      if (!idea) {
-          alert('Please describe your idea in the first text box to generate a detailed prompt.');
-          ideaInputEl.focus();
-          return;
-      }
-
-      if (generateIdeasButton) generateIdeasButton.disabled = true;
-      ideaInputEl.disabled = true;
-      const originalButtonContent = generateIdeasButton?.innerHTML;
-      if (generateIdeasButton) generateIdeasButton.innerHTML = '<div class="loader"></div> Generating...';
-
-      try {
-          const response = await fetch('/api/generate-text', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ idea }),
-          });
-
-          if (!response.ok) {
-              const errorData = await response.json().catch(() => ({}));
-              throw new Error(`Server Error (${response.status}): ${errorData?.error?.message || response.statusText}`);
-          }
-          
-          const { text: generatedPrompt } = await response.json();
-
-          if (generatedPrompt && promptEl) {
-              promptEl.value = generatedPrompt;
-              promptEl.focus();
-          } else {
-              throw new Error('The AI returned an empty response. Please try a different idea.');
-          }
-
-      } catch (error) {
-          console.error("Failed to generate prompt ideas:", error);
-          const message = error instanceof Error ? error.message : 'Unknown error';
-          alert(`Could not generate a new idea. ${message}`);
-      } finally {
-          if (generateIdeasButton) {
-            generateIdeasButton.disabled = false;
-            if (originalButtonContent) generateIdeasButton.innerHTML = originalButtonContent;
-          }
-          ideaInputEl.disabled = false;
-      }
-  }
-
-  async function handleGenerateClick() {
-    if (!promptEl?.value.trim()) {
-      alert('Please enter a prompt.');
-      return;
-    }
-    setUILoading(true);
-    if (quotaErrorEl) quotaErrorEl.style.display = 'none';
-
-    try {
-      const videos = await generateContentApi();
-      await handleGenerationSuccess(videos);
-    } catch (e) {
-      console.error(e);
-      const message = e instanceof Error ? e.message : String(e);
-      displayError(message);
-    } finally {
-      // Re-enable controls, but don't touch the status message which was set by success/error handlers.
-      setUILoading(false);
-    }
   }
 
   async function handleVideoUpload(e: Event) {
@@ -642,12 +256,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function updatePreviewAspectRatio() {
-      if (!videoPreviewWrapper) return;
-      videoPreviewWrapper.style.aspectRatio = projectAspectRatio.replace(':', ' / ');
-      // Recalculate overlay positions as viewport has changed
-      timelineOverlays.forEach(applyOverlayStyles);
-  }
 
   function applyClipTransforms() {
       if (!currentClipInPreview || !videoPreview) return;
@@ -678,11 +286,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
   function resetEditorView() {
-      if (!videoPreview) return;
-      videoPreview.pause();
-      videoPreview.src = '';
-      videoPreview.style.display = 'none';
-      if (editorPlaceholder) editorPlaceholder.style.display = 'block';
+      // Removed videoPreview logic as it's now in editor.ts
+      // The editor.ts initializeEditor function will handle the initial state
+      // of the preview player.
       if (playPauseButton) playPauseButton.disabled = true;
       if (addTextButton) addTextButton.disabled = true;
       if (playhead) playhead.style.display = 'none';
@@ -695,7 +301,7 @@ window.addEventListener('DOMContentLoaded', () => {
           if (editorPlaceholder) videoPreviewWrapper.appendChild(editorPlaceholder);
           if (videoPreview) videoPreviewWrapper.appendChild(videoPreview);
       }
-      projectAspectRatio = '9:16'; // Reset to default
+      // Removed aspect ratio update, will be handled in editor.ts
       updatePreviewAspectRatio();
       renderTimelineTracks();
       updateTimelineUI();
@@ -722,29 +328,6 @@ window.addEventListener('DOMContentLoaded', () => {
       repackClips();
       renderTimelineTracks();
       updateTimelineUI();
-  }
-
-
-  function handleSelectClip(clipId: number, element: HTMLDivElement) {
-      deselectAllItems();
-      selectedClipId = clipId;
-      element.classList.add('is-selected');
-      updatePropertiesPanel();
-  }
-
-  function handleSelectOverlay(overlayId: number, element: HTMLDivElement) {
-      deselectAllItems();
-      selectedOverlayId = overlayId;
-      element.classList.add('is-selected');
-      updatePropertiesPanel();
-  }
-
-  function deselectAllItems() {
-      selectedClipId = null;
-      selectedOverlayId = null;
-      document.querySelectorAll('.timeline-clip.is-selected').forEach(el => el.classList.remove('is-selected'));
-      document.querySelectorAll('.text-overlay.is-selected').forEach(el => el.classList.remove('is-selected'));
-      updatePropertiesPanel();
   }
 
   async function generateClipThumbnails(videoUrl: string, duration: number, numThumbnails = 5, sourceStart = 0): Promise<string[]> {
@@ -847,20 +430,8 @@ window.addEventListener('DOMContentLoaded', () => {
               }
           });
 
-      }, { once: true });
-  }
 
-  function loadClipIntoPreview(clip: TimelineClip, time = 0, forcePlay = false) {
-      if (!videoPreview) return;
-      const shouldPlay = forcePlay || !videoPreview.paused;
-      isSeeking = true;
-      
-      // Pause any current playback before changing the source
-      videoPreview.pause();
-
-      videoPreview.src = clip.url;
-      currentClipInPreview = clip;
-      applyClipTransforms();
+  function loadClipIntoPreview(clip: TimelineClip, time = 0, forcePlay = false) { // This function will be moved later
 
       videoPreview.addEventListener('loadeddata', () => {
           if (!videoPreview) return;
@@ -874,6 +445,8 @@ window.addEventListener('DOMContentLoaded', () => {
           isSeeking = false;
           updateTimelineUI(); // Force an immediate UI update
       }, { once: true });
+
+      videoPreview.src = clip.url;
   }
 
   function renderMediaBin() {
@@ -1100,7 +673,7 @@ window.addEventListener('DOMContentLoaded', () => {
                       clipEl.textContent = `Loading Clip #${clip.id + 1}...`;
                   }
                   
-                  clipEl.addEventListener('click', () => handleSelectClip(clip.id, clipEl));
+                  // clipEl.addEventListener('click', () => handleSelectClip(clip.id, clipEl)); // Moved to editor.ts
                   clipEl.addEventListener('dragstart', (e) => handleTimelineClipDragStart(e, clip));
                   clipEl.addEventListener('dragend', handleTimelineClipDragEnd);
 
@@ -1112,7 +685,7 @@ window.addEventListener('DOMContentLoaded', () => {
                   updateTimelineTextClipElement(overlay);
                   if (overlay.id === selectedOverlayId) {
                       overlay.clipElement.classList.add('is-selected');
-                  }
+                      }
                   trackEl.appendChild(overlay.clipElement);
               });
           }
@@ -1148,56 +721,6 @@ window.addEventListener('DOMContentLoaded', () => {
           timelineRuler.appendChild(tick);
       }
   }
-
-
-  function updatePlaybackStatus(isPlaying: boolean) {
-      if (!playIcon || !pauseIcon) return;
-      if (isPlaying) {
-          playIcon.style.display = 'none';
-          pauseIcon.style.display = 'block';
-      } else {
-          playIcon.style.display = 'block';
-          pauseIcon.style.display = 'none';
-      }
-  }
-
-  function updateTimelineUI() {
-      if (isSeeking || !videoPreview) return;
-
-      let globalTime = 0;
-      if (currentClipInPreview) {
-          globalTime = currentClipInPreview.start + (videoPreview.currentTime - currentClipInPreview.sourceStart);
-      }
-
-      // Update time display
-      if (currentTimeEl) currentTimeEl.textContent = formatTime(globalTime);
-      if (totalDurationEl) totalDurationEl.textContent = formatTime(sequenceDuration);
-
-      // Update playhead
-      const percentComplete = sequenceDuration > 0 ? (globalTime / sequenceDuration) * 100 : 0;
-      if (playhead) playhead.style.left = `${percentComplete}%`;
-
-      // Update text overlays
-      timelineOverlays.forEach(overlay => {
-          const shouldShow = globalTime >= overlay.start && globalTime < overlay.end;
-          overlay.element.style.display = shouldShow ? 'block' : 'none';
-      });
-
-      // Highlight active clip on timeline
-      document.querySelectorAll('.timeline-clip.video-clip.active').forEach(el => el.classList.remove('active'));
-      if (currentClipInPreview && timelineTracksContainer) {
-          const activeClipEl = timelineTracksContainer.querySelector(`.video-clip[data-clip-id="${currentClipInPreview.id}"]`);
-          if (activeClipEl) {
-              activeClipEl.classList.add('active');
-          }
-      }
-  }
-
-  // --- Text Overlay Logic ---
-
-  function applyOverlayStyles(overlay: TextOverlay) {
-      if (!videoPreviewWrapper) return;
-      const el = overlay.element;
       el.style.fontFamily = overlay.fontFamily;
       el.style.color = overlay.color;
       
@@ -1303,73 +826,12 @@ window.addEventListener('DOMContentLoaded', () => {
       handleSelectOverlay(id, overlay.clipElement);
   }
 
-  function updatePropertiesPanel() {
-      if (!textProperties || !videoProperties || !propertiesPlaceholder) return;
-      if (selectedOverlayId !== null) {
-          const overlay = timelineOverlays.find(o => o.id === selectedOverlayId);
-          if (!overlay) {
-              deselectAllItems(); 
-              return;
-          }
-          textProperties.style.display = 'block';
-          videoProperties.style.display = 'none';
-          propertiesPlaceholder.style.display = 'none';
-
-          // Populate controls
-          if (propTextContent) propTextContent.value = overlay.text;
-          if (propFontFamily) propFontFamily.value = overlay.fontFamily;
-          if (propFontColor) propFontColor.value = overlay.color;
-          if (propFontSize) propFontSize.value = String(overlay.fontSize);
-          if (propFontSizeValue) propFontSizeValue.textContent = String(overlay.fontSize);
-
-      } else if (selectedClipId !== null) {
-          const clip = timelineClips.find(c => c.id === selectedClipId);
-          if (!clip) {
-              deselectAllItems();
-              return;
-          }
-          textProperties.style.display = 'none';
-          videoProperties.style.display = 'block';
-          propertiesPlaceholder.style.display = 'none';
-
-          // Populate video controls
-          const props = clip.properties;
-          if (propVideoVolume) propVideoVolume.value = String(props.volume * 100);
-          if (propVideoVolumeValue) propVideoVolumeValue.textContent = `${Math.round(props.volume * 100)}%`;
-          if (propVideoScale) propVideoScale.value = String(props.scale * 100);
-          if (propVideoScaleValue) propVideoScaleValue.textContent = `${Math.round(props.scale * 100)}%`;
-          if (propVideoPosX) propVideoPosX.value = String(props.position.x);
-          if (propVideoPosXValue) propVideoPosXValue.textContent = `${props.position.x}%`;
-          if (propVideoPosY) propVideoPosY.value = String(props.position.y);
-          if (propVideoPosYValue) propVideoPosYValue.textContent = `${props.position.y}%`;
-          if (propVideoRotation) propVideoRotation.value = String(props.rotation);
-          if (propVideoRotationValue) propVideoRotationValue.textContent = `${props.rotation}°`;
           
       } else {
           // Hide all panels, show placeholder
           textProperties.style.display = 'none';
           videoProperties.style.display = 'none';
           propertiesPlaceholder.style.display = 'block';
-      }
-  }
-
-
-  function updateTimelineTextClipElement(overlay: TextOverlay) {
-      if (sequenceDuration === 0) return;
-      const left = (overlay.start / sequenceDuration) * 100;
-      const width = ((overlay.end - overlay.start) / sequenceDuration) * 100;
-      overlay.clipElement.style.left = `${left}%`;
-      overlay.clipElement.style.width = `${width}%`;
-      overlay.clipElement.textContent = overlay.text;
-
-      // Re-add handles since textContent clears them
-      if (!overlay.clipElement.querySelector('.resize-handle')) {
-          const leftHandle = document.createElement('div');
-          leftHandle.className = 'resize-handle left';
-          overlay.clipElement.appendChild(leftHandle);
-          const rightHandle = document.createElement('div');
-          rightHandle.className = 'resize-handle right';
-          overlay.clipElement.appendChild(rightHandle);
       }
   }
 
@@ -1621,44 +1083,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Modals
-    function openSettingsModal() {
-        if (settingsModal && settingDuration) {
-            settingDuration.value = String(sequenceDuration > 0 ? sequenceDuration : 15);
-            settingsModal.style.display = 'flex';
-        }
-    }
-
-    function closeSettingsModal() {
-        if (settingsModal) {
-            settingsModal.style.display = 'none';
-        }
-    }
-
-    function saveSettings() {
-        if (settingDuration) {
-            const newDuration = parseInt(settingDuration.value, 10);
-            if (!isNaN(newDuration) && newDuration > 0 && newDuration <= 60) {
-                const contentDuration = timelineClips.reduce((acc, clip) => acc + clip.duration, 0);
-                sequenceDuration = Math.max(newDuration, Math.ceil(contentDuration));
-                
-                repackClips();
-                renderTimelineTracks();
-                renderTimelineRuler();
-                updateTimelineUI();
-            } else {
-                alert("Please enter a valid duration between 1 and 60 seconds.");
-            }
-        }
-        closeSettingsModal();
-    }
-    
-    function closeErrorModal() {
-        if (errorModal) {
-            errorModal.style.display = 'none';
-        }
-    }
-
     // --- Track Management ---
     function addTrack(type: TrackType) {
         tracks.push({ id: nextTrackId++, type });
@@ -1854,16 +1278,9 @@ window.addEventListener('DOMContentLoaded', () => {
   studioTabButton?.addEventListener('click', () => switchView('editor-view'));
 
 
-  // Generator Listeners
-  fileInput?.addEventListener('change', async (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) {
-      try {
-          imageBase64 = await blobToBase64(file);
-          imageMimeType = file.type;
-          if (imagePreview) imagePreview.src = URL.createObjectURL(file);
-          if (imagePreviewContainer) imagePreviewContainer.style.display = 'block';
-      } catch(err) {
+    // Generator Listeners (Moved to generator.ts)
+    // Placeholder - actual listeners initialized in generator.ts
+ initializeGenerator(displayError, updateStudioNotification, renderMediaBin).catch(err => {
           console.error("Error reading file:", err);
           alert("Could not read the selected file.");
       }
@@ -1878,8 +1295,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
   });
 
-  generateButton?.addEventListener('click', handleGenerateClick);
-  generateIdeasButton?.addEventListener('click', handleGenerateIdeasClick);
 
 
   // Editor Listeners
@@ -1900,49 +1315,6 @@ window.addEventListener('DOMContentLoaded', () => {
       }
   });
 
-
-  videoPreview?.addEventListener('timeupdate', updateTimelineUI);
-  videoPreview?.addEventListener('play', () => updatePlaybackStatus(true));
-  videoPreview?.addEventListener('pause', () => updatePlaybackStatus(false));
-  videoPreview?.addEventListener('ended', () => {
-      if (isSeeking || !currentClipInPreview) {
-          updatePlaybackStatus(false);
-          return;
-      }
-
-      const currentIndex = timelineClips.findIndex(c => c.id === currentClipInPreview!.id);
-      const nextIndex = currentIndex + 1;
-
-      if (nextIndex < timelineClips.length) {
-          loadClipIntoPreview(timelineClips[nextIndex], 0, true);
-      } else {
-          updatePlaybackStatus(false);
-          if (timelineClips.length > 0) {
-              loadClipIntoPreview(timelineClips[0], 0, false);
-          }
-      }
-  });
-
-
-  playPauseButton?.addEventListener('click', () => {
-      if (!videoPreview) return;
-      if (videoPreview.paused) {
-          const globalTime = currentClipInPreview ? currentClipInPreview.start + (videoPreview.currentTime - currentClipInPreview.sourceStart) : 0;
-          
-          if (sequenceDuration > 0 && Math.abs(globalTime - sequenceDuration) < 0.1) {
-              if (timelineClips.length > 0) loadClipIntoPreview(timelineClips[0], 0, true);
-              return;
-          }
-
-          if (!currentClipInPreview && timelineClips.length > 0) {
-              loadClipIntoPreview(timelineClips[0], 0, true);
-          } else if (currentClipInPreview){
-              videoPreview.play().catch(console.error);
-          }
-      } else {
-          videoPreview.pause();
-      }
-  });
 
   // Media Bin Drag and Drop
   mediaBin?.addEventListener('dragstart', (e) => {
@@ -2122,149 +1494,39 @@ window.addEventListener('DOMContentLoaded', () => {
       }
   });
 
-  // Properties Panel listeners
-  const allPropInputs = document.querySelectorAll('#video-properties input, #video-properties select, #text-properties input, #text-properties select, #text-properties textarea');
-  allPropInputs.forEach(input => {
-    input.addEventListener('input', handlePropertiesChange);
-  });
-  resetTransformButton?.addEventListener('click', handleResetTransforms);
-  
-  // Modal listeners
-  sequenceSettingsButton?.addEventListener('click', openSettingsModal);
-  settingsSaveButton?.addEventListener('click', saveSettings);
-  settingsCancelButton?.addEventListener('click', closeSettingsModal);
-  errorModalClose?.addEventListener('click', closeErrorModal);
-  
+  // Initialize Modals (needs displayError, repackClips, renderTimelineTracks, renderTimelineRuler, updateTimelineUI)
+ initializeModals(displayError, repackClips, renderTimelineTracks, renderTimelineRuler, updateTimelineUI).catch(error => {
+ console.error("Error initializing modals:", error);
+ });
   // Final initializations
   initResizers();
   updateStudioNotification();
   switchView('generator-view');
 
   // Auth Listeners (Moved inside DOMContentLoaded)
+  // Adding a slight timeout to ensure all DOM elements are definitely available
   setTimeout(() => {
- console.log('Attaching onAuthStateChanged listener.');
       const googleSignInButton = document.querySelector<HTMLButtonElement>('#google-sign-in-button');
       // Ensure these are selected correctly now they are potentially inside a larger element
-      const signOutButton = document.querySelector<HTMLButtonElement>('#sign-out-button');
+      const signOutButton = document.querySelector<HTMLButtonElement>('#sign-out-button'); // Re-select here as it might be in the new container
       const userNameEl = document.querySelector<HTMLSpanElement>('#user-name');
       const authSection = document.querySelector<HTMLDivElement>('#auth-section');
       const userInfoDisplay = document.querySelector<HTMLDivElement>('.user-info-display');
-    
+      const creditBalanceDisplay = document.querySelector<HTMLSpanElement>('#credit-balance'); // Need this here too
+
       if (googleSignInButton) {
-          googleSignInButton.addEventListener('click', () => {
-              // Redirect to the backend to initiate Google OAuth flow
- signInWithPopup(auth, new GoogleAuthProvider()).catch(console.error);          });
-      }
+          // Add the editor initialization call here after all necessary DOM elements are selected
+          // Pass the dependent functions as arguments
+          initializeEditor(displayError, updateStudioNotification, loadClipIntoPreview, applyOverlayStyles, updatePreviewAspectRatio, applyClipTransforms, repackClips, resetEditorView, removeClipFromTimeline, deselectAllItems, generateClipThumbnails, addClipToTimeline, renderMediaBin, getInsertionMarker, handleTimelineClipDragStart, handleTimelineClipDragEnd, handleVideoClipResize, renderThumbnailsOnClip, renderTimelineTracks, renderTimelineRuler, updatePlaybackStatus, updateTimelineUI, handleOverlayDrag, createNewTextOverlay, updatePropertiesPanel, updateTimelineTextClipElement, initResizers, handleTimelineSeek, handleGenericClipMouseDown, handlePropertiesChange, handleResetTransforms, addTrack, deleteTrack, setTool, handleSplitterClick, splitVideoClip, splitTextOverlay, handleTimelineMouseMove);
 
-      // Auth State Change Listener
-      onAuthStateChanged(auth, async (user) => { // Made the function async
-          console.log('Auth state changed. User:', user);
-          // Check if the required DOM elements and user are available before proceeding
-          if (user && userInfoDisplay && userNameEl && authSection) {
-              console.log('User photoURL:', user.photoURL);
-              console.log('User is signed in:', user.uid);
-              //
-              // Check if displayName or photoURL are missing and attempt to update
-              // if (!user.displayName || !user.photoURL) {
-              //     console.log('User profile incomplete, attempting to update...');
-              //     user.updateProfile({
-              //         displayName: user.displayName || user.email || 'User', // Use email if displayName is missing
-              //         photoURL: user.photoURL || undefined // Undefined will not update the photoURL
-              //     })
-              //     .then(() => {
-              //         console.log('User profile updated successfully.');
-              //         // Force a UI update after profile is potentially updated
-              //         if (userNameEl) userNameEl.textContent = `Welcome, ${user.displayName || user.email || 'User'}`;
-              //         if (userProfilePictureEl) {
-              //             userProfilePictureEl.src = user.photoURL || 'pfp.png';
-              //             userProfilePictureEl.style.display = 'block';
-              //         }
-              //     }).catch(console.error);
-              // }
-
-          // Fetch and display credits
-          if (user && creditBalanceDisplay) {
-              try {
-                  console.log('Attempting to fetch credits...');
-                  const result = await getCredits();
-                  const credits = (result.data as any)?.credits || 0;
-                  creditBalanceDisplay.textContent = `Credits: ${credits}`;
-                  console.log('Successfully fetched credits:', result);
-              } catch (error) {
-                  console.error('Error fetching credits:', error);
-              }
-          }
-              if (userInfoDisplay) userInfoDisplay.style.display = 'flex';
-              if (userNameEl) userNameEl.textContent = `Welcome, ${user.displayName || user.email || 'User'}`;
-              if (authSection) authSection.style.display = 'none';
-              // Display profile picture if available
-              if (userProfilePictureEl) {
-                userProfilePictureEl.src = user.photoURL || 'pfp.png';
-                userProfilePictureEl.style.display = 'block';
-              }
-              if (signOutButton) signOutButton.addEventListener('click', () => signOut(auth));
-
-              // Show credit display and buy credits button if authenticated
-              if (creditBalanceDisplay) {
-                creditBalanceDisplay.style.display = 'inline-block';
-              }
-              if (buyCreditsButton) {
-                buyCreditsButton.style.display = 'inline-block';
+          googleSignInButton.addEventListener('click', () => signInWithPopup(auth, new GoogleAuthProvider()).catch(console.error));
               }
 
-
-          } else {
-              console.log('User is signed out');
-              if (userInfoDisplay) userInfoDisplay.style.display = 'none'; // Ensure this is hidden
-              if (authSection) authSection.style.display = 'flex'; // Ensure this is shown
-              if (userNameEl) userNameEl.textContent = ''; // Clear name
-              // Hide profile picture when signed out
-              if (userProfilePictureEl) {
-                userProfilePictureEl.src = ''; // Clear the image source
-                userProfilePictureEl.style.display = 'none'; // Hide the image element
+      if (userInfoDisplay && userNameEl && authSection && userProfilePictureEl && creditBalanceDisplay && signOutButton) {
+          initializeAuth(userInfoDisplay, userNameEl, authSection, userProfilePictureEl, creditBalanceDisplay, signOutButton).catch(error => {
+                console.error("Error initializing auth state:", error);
               }
           }
 
- });
     }, 0); // Add a small timeout to ensure DOM is fully ready
-
-    // Add event listeners for the credits modal
-    buyCreditsButton?.addEventListener('click', () => {
-        if (creditsModal) {
-            creditsModal.style.display = 'flex';
-        }
-    });
-
-    creditsCancelButton?.addEventListener('click', () => {
-        if (creditsModal) {
-            creditsModal.style.display = 'none';
-        }
-    });
-
-    buyButtons?.forEach(button => {
-        button.addEventListener('click', async () => {
-            const priceId = button.dataset.priceId;
-            if (!priceId) {
-                console.error('Price ID not found on buy button');
-                displayError('Could not initiate checkout: Price ID is missing.');
-                return;
-            }
-
-            try {
-                // Call the createCheckoutSession function
-                const session = await createCheckoutSession({ priceId });
-                const sessionId = (session.data as any)?.id;
-
-                if (sessionId) {
-                    const stripe = (window as any).Stripe('YOUR_STRIPE_PUBLIC_KEY'); // Replace with your public key
-                    stripe.redirectToCheckout({ sessionId: sessionId });
- } else {
-                    throw new Error('Failed to get checkout session ID.');
-                }
-            } catch (error) {
-                console.error('Error creating checkout session:', error);
-                displayError(`Failed to initiate checkout: ${error instanceof Error ? error.message : String(error)}`);
-            }
-        });
-    });
-  });
+ });
