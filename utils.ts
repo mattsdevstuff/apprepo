@@ -1,24 +1,29 @@
-export {};
+/**
+ * @license
+ * Copyright 2025 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+// --- Utility Functions ---
 
 export function blobToBase64(blob: Blob): Promise<string> {
- return new Promise((resolve, reject) => {
- const reader = new FileReader();
- reader.onload = () => {
- const url = reader.result as string;
- // Return only the base64 part
- resolve(url.split(',')[1]);
- };
- reader.onerror = (error) => reject(error);
- reader.readAsDataURL(blob);
- });
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const url = reader.result as string;
+      resolve(url.split(',')[1]);
+    };
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(blob);
+  });
 }
 
 export function formatTime(seconds: number): string {
- const minutes = Math.floor(seconds / 60);
- const secs = Math.floor(seconds % 60);
- return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-export function sleep(ms: number) {
- return new Promise(resolve => setTimeout(resolve, ms));
+export function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }

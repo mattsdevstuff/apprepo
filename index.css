@@ -1,14 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&family=Readex+Pro:wght@400;500&family=Fira+Code&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;700&family=JetBrains+Mono:wght@400&display=swap');
 
 :root {
-  --background-color: #12181f;
-  --surface-color: #1a222a;
-  --primary-gradient-start: #8e44ad;
-  --primary-gradient-end: #3498db;
+  --background-color: #0e1116; /* Slightly softer dark background */
+  --surface-color: #161b22; /* Slightly softer dark surface */
+  --primary-gradient-start: #6a5acd; /* A bit more vibrant purple */
+  --primary-gradient-end: #48bfe3; /* A bit more vibrant blue */
   --text-color: #e0e6f0;
   --text-muted-color: #7b8a9c;
-  --border-color: #2c3a47;
-  --accent-color: #3498db;
+  --border-color: #21262d; /* Softer border */
+  --accent-color: #48bfe3; /* Vibrant blue */
   --error-color: #e74c3c;
   --border-radius: 12px;
   --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -30,10 +30,11 @@ html::-webkit-scrollbar {
 
 /* Body and main layout */
 body {
-  font-family: 'Readex Pro', sans-serif;
+  font-family: 'Urbanist', sans-serif;
   color: var(--text-color);
   margin: 0;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: flex-start;
   height: 100%;
@@ -86,9 +87,12 @@ body.is-dragging-overlay {
 main {
   width: 100%;
   max-width: 1200px;
-  margin: 0 auto; /* Center the main content */
+  margin: 0 auto;
   box-sizing: border-box;
-  flex-direction: column; /* Stack content vertically */
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 0;
 }
 
 .container { /* Main app container */
@@ -101,6 +105,8 @@ main {
   flex-direction: column;
   flex-grow: 1;
   max-width: 1200px; /* Limit the maximum width */
+  margin-bottom: 2rem; /* Add space below the container */
+  margin-top: 2rem; /* Add space above the container */
 }
 
 .app-header {
@@ -109,8 +115,9 @@ main {
   left: 0;
   right: 0;
   background-color: var(--surface-color);
-  padding: 0.75rem 2rem; /* Reduced vertical padding */
+  padding: 0.75rem 2.5rem; /* Increased horizontal padding */
   display: flex;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4); /* Increased box-shadow intensity */
   border-bottom: 1px solid var(--border-color); /* Keep border-bottom */
   z-index: 1001; /* Ensure it's on top, even above modals */
   min-height: 60px;
@@ -123,6 +130,11 @@ main {
   display: flex;
   align-items: center;
 }
+.header-auth-status {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
 .auth-section {
   display: flex; /* Ensure the auth section uses flexbox for button alignment */
 }
@@ -132,7 +144,7 @@ main {
 header {
   /* This is the old main header, now part of the main content */
   color: white;
-  padding: 2.5rem 2rem 1.5rem;
+  padding: 2.5rem 2.5rem 1.5rem; /* Adjusted padding */
   text-align: center;
   font-family: 'Outfit', sans-serif;
 }
@@ -154,75 +166,151 @@ header p {
   font-size: 1.1rem;
 }
 
-.user-info-header {
-  /* This will be inside .app-header */
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  padding: 0; /* Remove padding as app-header has padding */
-  border-bottom: none; /* Remove border */
-  gap: 1rem; /* Add gap between user info and sign-in button */
+.user-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
 
-.user-info-display {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  /* Hide by default, shown by JS when logged in */
-  display: none; 
+#buy-credits-button {
+    background: linear-gradient(45deg, #f7b733, #fc4a1a); /* Gold/Orange gradient */
+    color: white;
+    font-weight: 700;
+    padding: 0.7rem 1.2rem;
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: 0 4px 15px rgba(252, 74, 26, 0.3);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
 }
 
-/* New styles for Credit Balance and Buy Credits button */
+#buy-credits-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(252, 74, 26, 0.4);
+}
+
 #credit-balance-display {
-  font-size: 0.9rem;
-  font-weight: 500;
-  background-color: var(--surface-color);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
   padding: 0.6rem 1rem;
   border-radius: var(--border-radius);
-  border: 1px solid var(--border-color);
-  color: var(--text-color); /* Use text color for display */
-  /* Ensure it doesn't look interactive */
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-color);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+  transition: all 0.2s;
   cursor: default;
   user-select: none;
 }
 
-#buy-credits-button {
-    /* Style as a prominent action button */
-    background-color: var(--accent-color);
-    color: var(--text-color);
-    padding: 0.6rem 1rem;
-    border-radius: var(--border-radius);
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
+#credit-balance-display .fa-coins {
+  color: #FFD700; /* Gold color */
+  font-size: 1.1em;
+  filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.5)); /* Gold glow */
 }
 
-#buy-credits-button:hover:not(:disabled),
-#sign-out-button:hover:not(:disabled) { /* Assuming sign-out uses similar interaction */
-    border-color: var(--accent-color); /* You might want a different hover for sign-out */
-    background-color: var(--accent-color);
-    color: white;
+/* User Profile Dropdown Menu */
+.user-profile-menu {
+    position: relative;
 }
 
-#sign-out-button {
+#user-profile-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
     background-color: var(--surface-color);
     border: 1px solid var(--border-color);
-    color: var(--text-color);
-    padding: 0.6rem 1rem;
+    padding: 0.4rem 0.8rem;
     border-radius: var(--border-radius);
-    font-size: 0.9rem;
-    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
+    font-family: 'Urbanist', sans-serif;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+#user-profile-trigger:hover,
+#user-profile-trigger[aria-expanded="true"] {
+    background-color: var(--background-color);
+    border-color: var(--text-muted-color);
 }
 
 #user-profile-picture {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  margin-right: 0.5rem;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+#user-profile-trigger .fa-chevron-down {
+    font-size: 0.8rem;
+    color: var(--text-muted-color);
+    transition: transform 0.2s;
+}
+
+#user-profile-trigger[aria-expanded="true"] .fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+#user-profile-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    width: 200px;
+    z-index: 1002;
+    overflow: hidden;
+    display: none; /* Hide by default, JS will toggle */
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#user-profile-dropdown.show {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    color: var(--text-muted-color);
+    text-align: left;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dropdown-item:hover {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+.dropdown-item i {
+    width: 16px;
+    text-align: center;
+    color: var(--text-muted-color);
+    transition: color 0.2s;
+}
+.dropdown-item:hover i {
+    color: var(--text-color);
 }
 
 /* Tabs */
@@ -351,7 +439,7 @@ textarea, select {
   padding: 0.85rem 1rem;
   font-family: inherit;
   font-size: 1rem;
-  font-family: 'Readex Pro', sans-serif;
+  font-family: 'Urbanist', sans-serif;
   background-color: var(--background-color);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
@@ -392,7 +480,7 @@ select {
     background-color: var(--surface-color);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-  padding: 0.5rem 1rem; /* Adjusted padding for slightly slimmer look */
+    padding: 0.5rem 1rem; /* Adjusted padding for slightly slimmer look */
     font-family: 'Readex Pro', sans-serif;
     border-radius: var(--border-radius);
     font-size: 0.9rem;
@@ -418,7 +506,7 @@ select {
     background-color: var(--surface-color);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    font-family: 'Readex Pro', sans-serif;
+    font-family: 'Urbanist', sans-serif;
     padding: 0.6rem 1rem;
     border-radius: var(--border-radius);
     font-size: 0.9rem;
@@ -484,7 +572,7 @@ input[type="file"]::file-selector-button {
   padding: 0.8rem 1.2rem;
   border-radius: var(--border-radius);
   color: white;
-  font-weight: 500;
+  font-weight: 700;
   font-family: 'Readex Pro', sans-serif;
   cursor: pointer;
   margin-right: 1rem;
@@ -499,7 +587,7 @@ input[type="file"]::file-selector-button:hover {
 .generate-button {
   width: 100%;
   padding: 1rem;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 500;
   color: white;
   background: linear-gradient(90deg, var(--primary-gradient-start), var(--primary-gradient-end));
@@ -698,7 +786,7 @@ input[type="file"]::file-selector-button:hover {
 
 .error {
   color: var(--error-color);
-  font-family: 'Readex Pro', sans-serif;
+  font-family: 'Urbanist', sans-serif;
   font-weight: 500;
 }
 
@@ -731,7 +819,7 @@ input[type="file"]::file-selector-button:hover {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 500;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Urbanist', sans-serif; /* Using Urbanist for headers too */
   white-space: nowrap;
 }
 .editor-header .header-actions {
@@ -741,9 +829,10 @@ input[type="file"]::file-selector-button:hover {
 
 .editor-main-content {
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* Arrange body and timeline vertically */
     flex-grow: 1;
     overflow: hidden;
+    /* Removed padding-bottom to fix timeline gap */
 }
 
 .editor-body {
@@ -751,6 +840,7 @@ input[type="file"]::file-selector-button:hover {
   flex-grow: 1;
   overflow: hidden;
   min-height: 0;
+  /* Removed margin-bottom that might have caused gap */
 }
 
 .editor-panel {
@@ -771,7 +861,7 @@ input[type="file"]::file-selector-button:hover {
   margin: 0;
   font-size: 1rem;
   font-weight: 500;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Urbanist', sans-serif; /* Using Urbanist for panel headers */
   color: var(--text-muted-color);
 }
 .panel-header label.action-button {
@@ -826,8 +916,8 @@ input[type="file"]::file-selector-button:hover {
 }
 .media-clip-title {
   padding: 0.75rem;
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 0.85rem; /* Reduced font size */
+  font-weight: 400; /* Slightly lighter weight for title */
   font-family: 'Readex Pro', sans-serif;
 }
 
@@ -939,9 +1029,9 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .time-display {
-    font-family: monospace;
+    font-family: 'JetBrains Mono', monospace; /* Using JetBrains Mono */
     font-size: 1.1rem;
-    font-family: 'Fira Code', monospace;
+    font-family: 'JetBrains Mono', monospace; /* Using JetBrains Mono */
     color: var(--text-muted-color);
 }
 
@@ -969,9 +1059,9 @@ input[type="file"]::file-selector-button:hover {
     background-color: var(--surface-color);
     border: 1px solid var(--border-color);
     color: var(--text-muted-color);
-    padding: 0.6rem;
+    padding: 0.6rem 1rem;
     font-family: 'Readex Pro', sans-serif;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius); /* Ensure consistent border radius */
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
@@ -996,7 +1086,8 @@ input[type="file"]::file-selector-button:hover {
 .timeline-container {
   background-color: #1f2933;
   flex-shrink: 0;
-  flex-basis: 180px;
+  height: 180px; /* Set a defined height */
+  flex-basis: auto; /* Allow height to control size */
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1091,10 +1182,9 @@ input[type="file"]::file-selector-button:hover {
 }
 
 #timeline-tools-vertical .tool-button {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  padding: 0;
+  width: 32px; /* Reduced size */
+  height: 32px; /* Reduced size */
+  padding: 0; /* Keep padding 0 as they are fixed size */
   font-size: 1.1rem;
   gap: 0;
 }
@@ -1108,7 +1198,7 @@ input[type="file"]::file-selector-button:hover {
 }
 .track-header {
   position: relative;
-  height: 48px; /* Match track height */
+  height: 40px; /* Reduced track height */
   padding: 0.5rem;
   box-sizing: border-box;
   display: flex;
@@ -1116,10 +1206,10 @@ input[type="file"]::file-selector-button:hover {
   justify-content: center;
   gap: 0.5rem;
   font-weight: 500;
-  color: var(--text-muted-color);
+  color: var(--text-color); /* Use text-color for track headers */
   font-family: 'Readex Pro', sans-serif;
   border-bottom: 1px solid var(--border-color);
-  background: #242f3a;
+  background: var(--surface-color); /* Use surface color for track headers */
 }
 .track-header i {
   font-size: 1rem;
@@ -1175,8 +1265,9 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .timeline-track {
+  flex-shrink: 0;
   width: 100%;
-  height: 48px;
+  height: 40px; /* Match track height */
   background-color: transparent;
   border-bottom: 1px solid var(--border-color);
   position: relative;
@@ -1212,8 +1303,8 @@ input[type="file"]::file-selector-button:hover {
   display: flex;
   align-items: center;
   color: white;
-  font-size: 0.8rem;
-  font-family: 'Readex Pro', sans-serif;
+  font-size: 0.75rem; /* Reduced font size for clip text */
+  font-family: 'Urbanist', sans-serif; /* Using Urbanist for clip text */
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -1373,7 +1464,7 @@ input[type="file"]::file-selector-button:hover {
 #insertion-marker {
   position: absolute;
   left: 0;
-  top: 0;
+  top: 0; /* Will be set by JS */
   width: 3px;
   height: 48px; /* Match track height */
   background-color: var(--accent-color);
@@ -1470,7 +1561,7 @@ input[type="color"]::-webkit-color-swatch {
   background-color: var(--surface-color);
   padding: 2rem;
   border-radius: var(--border-radius);
-  font-family: 'Readex Pro', sans-serif;
+  font-family: 'Urbanist', sans-serif; /* Using Urbanist for modal content */
   box-shadow: var(--box-shadow);
   width: 100%;
   max-width: 450px;
@@ -1489,7 +1580,7 @@ input[type="color"]::-webkit-color-swatch {
   padding: 0.85rem 1rem;
   font-family: inherit;
   font-size: 1rem;
-  font-family: 'Readex Pro', sans-serif;
+  font-family: 'Urbanist', sans-serif; /* Using Urbanist for modal inputs */
   background-color: var(--background-color);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
@@ -1525,7 +1616,7 @@ input[type="color"]::-webkit-color-swatch {
     background-color: var(--surface-color);
     padding: 0.2rem 0.5rem;
     border-radius: 6px;
-    font-family: monospace;
+    font-family: 'JetBrains Mono', monospace; /* Using JetBrains Mono for code */
     font-family: 'Fira Code', monospace;
     font-size: 0.9rem;
     color: var(--error-color);
@@ -1572,6 +1663,118 @@ input[type="color"]::-webkit-color-swatch {
     font-weight: bold;
 }
 
+/* Credits Modal Redesign */
+#credits-modal .modal-content {
+  max-width: 700px;
+}
+.credit-packages {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 600px) {
+  .credit-packages {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.credit-package {
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.credit-package:hover {
+  transform: translateY(-5px);
+  border-color: var(--accent-color);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+}
+
+.credit-package.popular {
+  border-color: var(--primary-gradient-start);
+  transform: scale(1.05);
+  box-shadow: 0 8px 40px rgba(106, 90, 205, 0.3);
+}
+.credit-package.popular:hover {
+    transform: scale(1.05) translateY(-5px);
+}
+
+.popular-badge {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    background: linear-gradient(45deg, var(--primary-gradient-start), var(--primary-gradient-end));
+    color: white;
+    padding: 0.4rem 1.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border-radius: 0 var(--border-radius) 0 var(--border-radius);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.package-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: var(--accent-color);
+}
+.credit-package.popular .package-icon {
+  color: var(--primary-gradient-start);
+}
+
+.credit-package h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-color);
+}
+.package-credits {
+    margin: 0;
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1;
+    color: white;
+    font-family: 'JetBrains Mono', monospace;
+}
+.credits-label {
+    margin: 0.25rem 0 1.5rem;
+    color: var(--text-muted-color);
+    font-size: 0.9rem;
+}
+.credit-package .buy-button {
+  width: 100%;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 0.8rem;
+  border-radius: var(--border-radius);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: auto; /* Push button to the bottom */
+}
+
+.credit-package .buy-button:hover {
+  background-color: #3aa6c2; /* Darker accent */
+}
+
+.credit-package.popular .buy-button {
+    background: linear-gradient(45deg, var(--primary-gradient-start), var(--primary-gradient-end));
+    box-shadow: 0 4px 15px rgba(106, 90, 205, 0.4);
+}
+.credit-package.popular .buy-button:hover {
+    opacity: 0.9;
+}
+
 
 /* Responsive Design */
 @media (max-width: 1200px) {
@@ -1598,11 +1801,11 @@ input[type="color"]::-webkit-color-swatch {
         height: auto;
         min-height: 100%;
         overflow-x: hidden; /* Hide horizontal scroll on mobile */    
-        padding-top: 60px; /* Reduce padding-top for slimmer header */
+ padding-top: 60px; /* Reduce padding-top for slimmer header */
     }
 
     .app-header {
-        padding: 0.5rem 1rem; /* Further reduce header padding */
+        padding: 0.5rem 1.5rem; /* Adjusted padding for mobile */
     }
 
     main {
