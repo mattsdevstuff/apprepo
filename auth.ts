@@ -1,6 +1,7 @@
 /**
  * @license
  * Copyright 2025 Google LLC
+ * Copied 2024 Google LLC
  * SPDX-License-Identifier: Apache-2.0
  */
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
@@ -8,6 +9,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app } from './firebaseConfig';
 import * as DOM from './dom';
 
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 const auth = getAuth(app);
 const functions = getFunctions(app);
 const getCredits = httpsCallable(functions, 'getCredits');
@@ -104,6 +106,12 @@ export function initAuth() {
                 DOM.userProfilePictureEl.src = user.photoURL || 'pfp.png';
                 
                 DOM.signOutButton.onclick = () => signOut(auth);
+                
+                const db = getFirestore(app);
+                const userDocRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userDocRef);
+
+                if (!userDoc.exists()) { await createUserDocument(user.uid, user.email || ""); }
 
                 try {
                     console.log('Attempting to fetch credits...');
@@ -129,4 +137,10 @@ export function initAuth() {
 
     setupStripeCheckout();
     setupUserProfileDropdown();
+}
+
+async function createUserDocument(uid: string, email: string) {
+    const db = getFirestore(app);
+    const userDocRef = doc(db, "users", uid);
+    await setDoc(userDocRef, { credits: 0 });
 }
