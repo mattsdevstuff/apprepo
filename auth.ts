@@ -1,146 +1,63 @@
 /**
  * @license
  * Copyright 2025 Google LLC
- * Copied 2024 Google LLC
  * SPDX-License-Identifier: Apache-2.0
  */
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { app } from './firebaseConfig';
+import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from "firebase/auth";
 import * as DOM from './dom';
+import { app } from './firebaseConfig';
+import { getAuth } from "firebase/auth";
 
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 const auth = getAuth(app);
-const functions = getFunctions(app);
-const getCredits = httpsCallable(functions, 'getCredits');
-const createCheckoutSession = httpsCallable(functions, 'createCheckoutSession');
+const provider = new GoogleAuthProvider();
 
-function setupStripeCheckout() {
-    DOM.buyCreditsButton?.addEventListener('click', () => {
-        if (DOM.creditsModal) {
-            DOM.creditsModal.style.display = 'flex';
-        }
-    });
-
-    DOM.creditsCancelButton?.addEventListener('click', () => {
-        if (DOM.creditsModal) {
-            DOM.creditsModal.style.display = 'none';
-        }
-    });
-
-    DOM.buyButtons?.forEach(button => {
-        button.addEventListener('click', async () => {
-            const priceId = button.dataset.priceId;
-            if (!priceId) {
-                console.error('Price ID not found on buy button');
-                // displayError is in ui.ts, need a way to call it
-                alert('Could not initiate checkout: Price ID is missing.');
-                return;
-            }
-
-            try {
-                const session = await createCheckoutSession({ priceId });
-                const sessionId = (session.data as any)?.id;
-
-                if (sessionId) {
-                    const stripe = (window as any).Stripe('YOUR_STRIPE_PUBLIC_KEY'); // Replace with your public key
-                    stripe.redirectToCheckout({ sessionId: sessionId });
-                } else {
-                    throw new Error('Failed to get checkout session ID.');
-                }
-            } catch (error) {
-                console.error('Error creating checkout session:', error);
-                const message = `Failed to initiate checkout: ${error instanceof Error ? error.message : String(error)}`;
-                alert(message);
-            }
-        });
-    });
+function showSignedIn(user: any) {
+    if (!DOM.authSection || !DOM.userActions || !DOM.userNameEl || !DOM.userProfilePictureEl) return;
+    DOM.authSection.style.display = 'none';
+    DOM.userActions.style.display = 'flex';
+    DOM.userNameEl.textContent = user.displayName;
+    DOM.userProfilePictureEl.src = user.photoURL;
 }
 
-function setupUserProfileDropdown() {
-    DOM.userProfileTrigger?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const dropdown = DOM.userProfileDropdown;
-        const trigger = DOM.userProfileTrigger;
-        if (dropdown && trigger) {
-            const isExpanded = trigger.getAttribute('aria-expanded') === 'true';
-            if (isExpanded) {
-                dropdown.classList.remove('show');
-                trigger.setAttribute('aria-expanded', 'false');
-            } else {
-                dropdown.classList.add('show');
-                trigger.setAttribute('aria-expanded', 'true');
-            }
-        }
-    });
-
-    // Close dropdown when clicking outside
-    window.addEventListener('click', () => {
-        const dropdown = DOM.userProfileDropdown;
-        const trigger = DOM.userProfileTrigger;
-        if (dropdown?.classList.contains('show')) {
-            dropdown.classList.remove('show');
-            trigger?.setAttribute('aria-expanded', 'false');
-        }
-    });
+function showSignedOut() {
+    if (!DOM.authSection || !DOM.userActions) return;
+    DOM.authSection.style.display = 'flex';
+    DOM.userActions.style.display = 'none';
 }
 
+async function signIn() {
+    try {
+        await signInWithPopup(auth, provider);
+    } catch (error) {
+        console.error("Sign in error:", error);
+    }
+}
+
+async function signOut() {
+    try {
+        await firebaseSignOut(auth);
+    } catch (error) {
+        console.error("Sign out error:", error);
+    }
+}
 
 export function initAuth() {
-    setTimeout(() => {
-        console.log('Attaching onAuthStateChanged listener.');
+    onAuthStateChanged(auth, user => {
+        if (user) {
+            showSignedIn(user);
+        } else {
+            showSignedOut();
+        }
+    });
 
-        DOM.googleSignInButton?.addEventListener('click', () => {
-            signInWithPopup(auth, new GoogleAuthProvider()).catch(console.error);
-        });
-
-        onAuthStateChanged(auth, async (user) => {
-            console.log('Auth state changed. User:', user);
-            if (user && DOM.userActions && DOM.userNameEl && DOM.authSection && DOM.userProfilePictureEl && DOM.signOutButton && DOM.creditBalanceDisplay && DOM.buyCreditsButton) {
-                console.log('User is signed in:', user.uid);
-                
-                DOM.userActions.style.display = 'flex';
-                DOM.userNameEl.textContent = `${user.displayName || user.email || 'User'}`;
-                DOM.authSection.style.display = 'none';
-                
-                DOM.userProfilePictureEl.src = user.photoURL || 'pfp.png';
-                
-                DOM.signOutButton.onclick = () => signOut(auth);
-                
-                const db = getFirestore(app);
-                const userDocRef = doc(db, "users", user.uid);
-                const userDoc = await getDoc(userDocRef);
-
-                if (!userDoc.exists()) { await createUserDocument(user.uid, user.email || ""); }
-
-                try {
-                    console.log('Attempting to fetch credits...');
-                    const result = await getCredits();
-                    const credits = (result.data as any)?.credits || 0;
-                    DOM.creditBalanceDisplay.innerHTML = `<i class="fa-solid fa-coins" aria-hidden="true"></i> ${credits}`;
-                    console.log('Successfully fetched credits:', result);
-                } catch (error) {
-                    console.error('Error fetching credits:', error);
-                }
-
-            } else {
-                console.log('User is signed out');
-                if (DOM.userActions) DOM.userActions.style.display = 'none';
-                if (DOM.authSection) DOM.authSection.style.display = 'flex';
-                if (DOM.userNameEl) DOM.userNameEl.textContent = '';
-                if (DOM.userProfilePictureEl) {
-                    DOM.userProfilePictureEl.src = '';
-                }
-            }
-        });
-    }, 0);
-
-    setupStripeCheckout();
-    setupUserProfileDropdown();
-}
-
-async function createUserDocument(uid: string, email: string) {
-    const db = getFirestore(app);
-    const userDocRef = doc(db, "users", uid);
-    await setDoc(userDocRef, { credits: 0 });
+    DOM.googleSignInButton?.addEventListener('click', signIn);
+    DOM.signOutButton?.addEventListener('click', signOut);
+    
+    // Simple dropdown toggle for user profile
+    DOM.userProfileTrigger?.addEventListener('click', () => {
+        if (DOM.userProfileDropdown) {
+            const isExpanded = DOM.userProfileDropdown.style.display === 'block';
+            DOM.userProfileDropdown.style.display = isExpanded ? 'none' : 'block';
+        }
+    });
 }
