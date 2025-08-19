@@ -2,9 +2,6 @@
 /**
  * Import function triggers from their respective submodules:
  *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
@@ -46,14 +43,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createCheckoutSession = exports.getCredits = void 0;
 const functions = __importStar(require("firebase-functions"));
-const firebase_functions_1 = require("firebase-functions");
-const https_1 = require("firebase-functions/https");
+const https_1 = require("firebase-functions/v1/https");
 const logger = __importStar(require("firebase-functions/logger"));
 const stripe_1 = __importDefault(require("stripe"));
 // Add Firestore import
 const firestore_1 = require("firebase-admin/firestore");
 // Dummy usage to satisfy compiler:
-console.log(https_1.onRequest, logger);
+console.log(logger);
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
 // For cost control, you can set the maximum number of containers that can be
@@ -65,22 +61,20 @@ console.log(https_1.onRequest, logger);
 // NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
 // functions should each use functions.runWith({ maxInstances: 10 }) instead.
 // In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-(0, firebase_functions_1.setGlobalOptions)({ maxInstances: 10 });
+// this will be the maximum concurrent request count.\nsetGlobalOptions({ maxInstances: 10 });
 // export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
+//   logger.info("Hello logs!\", {structuredData: true});
 //   response.send("Hello from Firebase!");
 // });
-// Remove explicit CallableContext type annotation
-exports.getCredits = functions.https.onCall(async (data, context) => {
-    // Check if the user is authenticated and context.auth exists
-    // We will rely on the runtime check and not the CallableContext type
+exports.getCredits = (0, https_1.onCall)(async (data, context) => {
+    var _a;
+    // Use optional chaining and check for authentication  
     if (!context || !context.auth) {
         // Throwing an HttpsError allows the client to receive a detailed error
-        throw new functions.https.HttpsError('unauthenticated', 'The user is not authenticated. Only authenticated users can check credits.');
+        throw new https_1.HttpsError('unauthenticated', 'The user is not authenticated. Only authenticated users can check credits.');
     }
-    // Access auth.uid after the runtime check
-    const uid = context.auth.uid;
+    // Access uid safely
+    const uid = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.uid;
     const db = (0, firestore_1.getFirestore)();
     try {
         const userDocRef = db.collection('users').doc(uid);
@@ -99,29 +93,29 @@ exports.getCredits = functions.https.onCall(async (data, context) => {
     catch (error) {
         console.error('Error fetching credits for user', uid, ':', error);
         // Throw an HttpsError to the client
-        throw new functions.https.HttpsError('internal', 'Unable to fetch user credits.', error // Include original error for debugging on the server
+        throw new https_1.HttpsError('internal', 'Unable to fetch user credits.', error // Include original error for debugging on the server
         );
     }
 });
-// Remove explicit CallableContext type annotation
-exports.createCheckoutSession = functions.https.onCall(async (data, context) => {
+exports.createCheckoutSession = (0, https_1.onCall)(async (data, context) => {
     var _a;
-    // Check if the user is authenticated and context.auth exists
-    // We will rely on the runtime check and not the CallableContext type
     if (!context || !context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'The user is not authenticated. Only authenticated users can create a checkout session.');
+        // Throw an HttpsError if the user is not authenticated
+        throw new https_1.HttpsError('unauthenticated', 'The user is not authenticated. Only authenticated users can create a checkout session.');
     }
     const uid = context.auth.uid;
+    console.log("Creating checkout session for user:", uid); // Log the UID
     // Validate input and ensure data and data.priceId exist
-    // We will rely on the runtime check as data is now typed as any
+    // We rely on the runtime check as data is now typed as any
     if (!data || typeof data.priceId !== 'string') {
-        throw new functions.https.HttpsError('invalid-argument', 'The function requires a single argument "priceId" which must be a string.');
+        throw new https_1.HttpsError(// Changed from functions.https.HttpsError
+        'invalid-argument', 'The function requires a single argument \"priceId\" which must be a string.');
     }
     const priceId = data.priceId; // Access priceId after validation
     // Initialize Stripe
     const stripeSecretKey = (_a = functions.config().stripe) === null || _a === void 0 ? void 0 : _a.secretkey; // Safely access secret key
     if (!stripeSecretKey) {
-        throw new functions.https.HttpsError('failed-precondition', 'Stripe secret key is not configured.');
+        throw new https_1.HttpsError('failed-precondition', 'Stripe secret key is not configured.');
     }
     // Removed apiVersion option
     const stripe = new stripe_1.default(stripeSecretKey);
@@ -137,7 +131,7 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
     }
     catch (error) {
         console.error('Error creating Stripe checkout session:', error);
-        throw new functions.https.HttpsError('internal', 'Unable to create checkout session.', error);
+        throw new https_1.HttpsError('internal', 'Unable to create checkout session.', error);
     }
 });
 //# sourceMappingURL=index.js.map
