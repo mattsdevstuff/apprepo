@@ -1,5 +1,1 @@
-backend/config/firebaseadm.json
-.env
-backend/.env
-node_modules
-dist
+.idx/

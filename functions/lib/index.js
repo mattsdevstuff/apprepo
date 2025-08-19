@@ -42,14 +42,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createCheckoutSession = exports.getCredits = void 0;
+const admin = __importStar(require("firebase-admin")); // Import firebase-admin
 const functions = __importStar(require("firebase-functions"));
-const https_1 = require("firebase-functions/v1/https");
-const logger = __importStar(require("firebase-functions/logger"));
 const stripe_1 = __importDefault(require("stripe"));
+const https_1 = require("firebase-functions/v2/https");
 // Add Firestore import
 const firestore_1 = require("firebase-admin/firestore");
-// Dummy usage to satisfy compiler:
-console.log(logger);
+// Initialize the Firebase Admin SDK
+admin.initializeApp();
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
 // For cost control, you can set the maximum number of containers that can be
@@ -62,19 +62,18 @@ console.log(logger);
 // functions should each use functions.runWith({ maxInstances: 10 }) instead.
 // In the v1 API, each function can only serve one request per container, so
 // this will be the maximum concurrent request count.\nsetGlobalOptions({ maxInstances: 10 });
+// Dummy usage to satisfy compiler:
 // export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!\", {structuredData: true});
+//   logger.info("Hello logs!", {structuredData: true});
 //   response.send("Hello from Firebase!");
 // });
-exports.getCredits = (0, https_1.onCall)(async (data, context) => {
-    var _a;
-    // Use optional chaining and check for authentication  
-    if (!context || !context.auth) {
-        // Throwing an HttpsError allows the client to receive a detailed error
+exports.getCredits = (0, https_1.onCall)(async (request) => {
+    if (!request.auth) {
+        // Throwing an HttpsError allows the client to receive a detailed error.
         throw new https_1.HttpsError('unauthenticated', 'The user is not authenticated. Only authenticated users can check credits.');
     }
-    // Access uid safely
-    const uid = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.uid;
+    // Access uid safely using request.auth
+    const uid = request.auth.uid;
     const db = (0, firestore_1.getFirestore)();
     try {
         const userDocRef = db.collection('users').doc(uid);
@@ -97,21 +96,21 @@ exports.getCredits = (0, https_1.onCall)(async (data, context) => {
         );
     }
 });
-exports.createCheckoutSession = (0, https_1.onCall)(async (data, context) => {
+// Existing function for createCheckoutSession remains as v1 for now
+exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
     var _a;
-    if (!context || !context.auth) {
+    if (!request.auth) {
         // Throw an HttpsError if the user is not authenticated
         throw new https_1.HttpsError('unauthenticated', 'The user is not authenticated. Only authenticated users can create a checkout session.');
     }
-    const uid = context.auth.uid;
-    console.log("Creating checkout session for user:", uid); // Log the UID
+    const uid = request.auth.uid;
+    console.log("Creating checkout session for user:", uid);
     // Validate input and ensure data and data.priceId exist
     // We rely on the runtime check as data is now typed as any
-    if (!data || typeof data.priceId !== 'string') {
-        throw new https_1.HttpsError(// Changed from functions.https.HttpsError
-        'invalid-argument', 'The function requires a single argument \"priceId\" which must be a string.');
+    if (!request.data || typeof request.data.priceId !== 'string') {
+        throw new https_1.HttpsError('invalid-argument', 'The function requires a single argument \"priceId\" which must be a string.');
     }
-    const priceId = data.priceId; // Access priceId after validation
+    const priceId = request.data.priceId; // Access priceId after validation
     // Initialize Stripe
     const stripeSecretKey = (_a = functions.config().stripe) === null || _a === void 0 ? void 0 : _a.secretkey; // Safely access secret key
     if (!stripeSecretKey) {

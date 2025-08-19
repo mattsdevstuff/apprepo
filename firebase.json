@@ -18,4 +18,14 @@
   "firestore": {
     "rules": "firestore.rules"
   }
+  ,
+  "hosting": {
+    "headers": [ {
+      "source": "**",
+      "headers": [ {
+        "key": "Access-Control-Allow-Origin",
+        "value": "https://frontend-service-130444982467.us-central1.run.app"
+      } ]
+    } ]
+  }
 }

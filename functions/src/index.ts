@@ -4,17 +4,16 @@
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 
+import * as admin from 'firebase-admin'; // Import firebase-admin
 import * as functions from "firebase-functions";
-import { onCall, HttpsError, CallableContext } from "firebase-functions/v1/https";
-import * as logger from "firebase-functions/logger";
 import Stripe from 'stripe';
+import { HttpsError, onCall, CallableRequest } from "firebase-functions/v2/https";
 
 // Add Firestore import
 import { getFirestore } from 'firebase-admin/firestore';
 
-
-// Dummy usage to satisfy compiler:
-console.log(logger);
+// Initialize the Firebase Admin SDK
+admin.initializeApp();
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -29,24 +28,23 @@ console.log(logger);
 // functions should each use functions.runWith({ maxInstances: 10 }) instead.
 // In the v1 API, each function can only serve one request per container, so
 // this will be the maximum concurrent request count.\nsetGlobalOptions({ maxInstances: 10 });
-
+// Dummy usage to satisfy compiler:
 // export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!\", {structuredData: true});
+//   logger.info("Hello logs!", {structuredData: true});
 //   response.send("Hello from Firebase!");
 // });
 
-export const getCredits = onCall(async (data, context: CallableContext) => { // Assuming getCredits was updated in a previous step
-  // Use optional chaining and check for authentication  
-  if (!context || !context.auth) {
-    // Throwing an HttpsError allows the client to receive a detailed error
+export const getCredits = onCall(async (request: CallableRequest) => {
+  if (!request.auth) {
+    // Throwing an HttpsError allows the client to receive a detailed error.
     throw new HttpsError(
       'unauthenticated',
       'The user is not authenticated. Only authenticated users can check credits.'
     );
   }
 
-  // Access uid safely
-  const uid = context.auth?.uid;
+  // Access uid safely using request.auth
+  const uid = request.auth.uid;
   const db = getFirestore();
 
   try {
@@ -75,28 +73,28 @@ export const getCredits = onCall(async (data, context: CallableContext) => { // 
     );
   }
 });
-export const createCheckoutSession = onCall(async (data: any, context: CallableContext) => {
-  if (!context || !context.auth) {
+// Existing function for createCheckoutSession remains as v1 for now
+export const createCheckoutSession = onCall(async (request: CallableRequest) => {
+  if (!request.auth) {
     // Throw an HttpsError if the user is not authenticated
     throw new HttpsError(
       'unauthenticated',
       'The user is not authenticated. Only authenticated users can create a checkout session.'
     );
   }
-
-  const uid = context.auth.uid;
-  console.log("Creating checkout session for user:", uid); // Log the UID
+  const uid = request.auth.uid;
+  console.log("Creating checkout session for user:", uid);
 
   // Validate input and ensure data and data.priceId exist
   // We rely on the runtime check as data is now typed as any
-  if (!data || typeof data.priceId !== 'string') {
-    throw new HttpsError( // Changed from functions.https.HttpsError
+  if (!request.data || typeof request.data.priceId !== 'string') {
+    throw new HttpsError(
       'invalid-argument',
       'The function requires a single argument \"priceId\" which must be a string.'
     );
   }
 
-  const priceId = data.priceId; // Access priceId after validation
+  const priceId = request.data.priceId; // Access priceId after validation
 
   // Initialize Stripe
   const stripeSecretKey = functions.config().stripe?.secretkey; // Safely access secret key
