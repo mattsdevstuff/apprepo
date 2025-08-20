@@ -7,16 +7,24 @@ import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut as fir
 import * as DOM from './dom';
 import { app } from './firebaseConfig';
 import { getAuth } from "firebase/auth";
+import { getCredits } from "./api";
 
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-function showSignedIn(user: any) {
-    if (!DOM.authSection || !DOM.userActions || !DOM.userNameEl || !DOM.userProfilePictureEl) return;
+async function showSignedIn(user: any) {
+    if (!DOM.authSection || !DOM.userActions || !DOM.userNameEl || !DOM.userProfilePictureEl || !DOM.creditBalanceDisplay) return;
     DOM.authSection.style.display = 'none';
     DOM.userActions.style.display = 'flex';
     DOM.userNameEl.textContent = user.displayName;
     DOM.userProfilePictureEl.src = user.photoURL;
+    try {
+        const credits = await getCredits();
+        DOM.creditBalanceDisplay.textContent = `Credits: ${credits}`;
+    } catch (error) {
+        console.error("Error fetching credits:", error);
+        DOM.creditBalanceDisplay.textContent = "Credits: --";
+    }
 }
 
 function showSignedOut() {
@@ -52,12 +60,4 @@ export function initAuth() {
 
     DOM.googleSignInButton?.addEventListener('click', signIn);
     DOM.signOutButton?.addEventListener('click', signOut);
-    
-    // Simple dropdown toggle for user profile
-    DOM.userProfileTrigger?.addEventListener('click', () => {
-        if (DOM.userProfileDropdown) {
-            const isExpanded = DOM.userProfileDropdown.style.display === 'block';
-            DOM.userProfileDropdown.style.display = isExpanded ? 'none' : 'block';
-        }
-    });
 }

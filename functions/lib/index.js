@@ -48,25 +48,12 @@ const stripe_1 = __importDefault(require("stripe"));
 const https_1 = require("firebase-functions/v2/https");
 // Add Firestore import
 const firestore_1 = require("firebase-admin/firestore");
+const video_1 = require("./video");
+const text_1 = require("./text");
 // Initialize the Firebase Admin SDK
 admin.initializeApp();
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.\nsetGlobalOptions({ maxInstances: 10 });
-// Dummy usage to satisfy compiler:
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
 exports.getCredits = (0, https_1.onCall)(async (request) => {
     if (!request.auth) {
         // Throwing an HttpsError allows the client to receive a detailed error.
@@ -96,7 +83,6 @@ exports.getCredits = (0, https_1.onCall)(async (request) => {
         );
     }
 });
-// Existing function for createCheckoutSession remains as v1 for now
 exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
     var _a;
     if (!request.auth) {
@@ -105,7 +91,6 @@ exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
     }
     const uid = request.auth.uid;
     console.log("Creating checkout session for user:", uid);
-    // Validate input and ensure data and data.priceId exist
     // We rely on the runtime check as data is now typed as any
     if (!request.data || typeof request.data.priceId !== 'string') {
         throw new https_1.HttpsError('invalid-argument', 'The function requires a single argument \"priceId\" which must be a string.');
@@ -116,7 +101,6 @@ exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
     if (!stripeSecretKey) {
         throw new https_1.HttpsError('failed-precondition', 'Stripe secret key is not configured.');
     }
-    // Removed apiVersion option
     const stripe = new stripe_1.default(stripeSecretKey);
     try {
         const session = await stripe.checkout.sessions.create({
@@ -133,4 +117,7 @@ exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
         throw new https_1.HttpsError('internal', 'Unable to create checkout session.', error);
     }
 });
+exports.startVideoGeneration = video_1.startVideoGeneration;
+exports.checkVideoGenerationStatus = video_1.checkVideoGenerationStatus;
+exports.generateText = text_1.generateText;
 //# sourceMappingURL=index.js.map

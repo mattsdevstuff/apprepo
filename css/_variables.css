@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;700&family=JetBrains+Mono:wght@400&display=swap');
+
+:root {
+  --background-color: #0e1116; /* Slightly softer dark background */
+  --surface-color: #161b22; /* Slightly softer dark surface */
+  --primary-gradient-start: #6a5acd; /* A bit more vibrant purple */
+  --primary-gradient-end: #48bfe3; /* A bit more vibrant blue */
+  --text-color: #e0e6f0;
+  --text-muted-color: #7b8a9c;
+  --border-color: #21262d; /* Softer border */
+  --accent-color: #48bfe3; /* Vibrant blue */
+  --error-color: #e74c3c;
+  --border-radius: 12px;
+  --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  --timeline-clip-bg: #2d3e50;
+  --timeline-text-bg: #b37400;
+  --timeline-track-header-width: 50px;
+}
+
+html {
+  height: 100%;
+  background-color: var(--background-color);
+  overflow-y: scroll; /* Always show scrollbar to prevent width jump */
+  scrollbar-width: none; /* Firefox */
+}
+
+html::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
+/* Body and main layout */
+body {
+  font-family: 'Urbanist', sans-serif;
+  color: var(--text-color);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100%;
+  box-sizing: border-box;
+  padding-top: 80px; /* Add padding-top to account for fixed header height */
+  overflow-x: auto; /* Allow horizontal scroll for editor on small screens */
+  overflow-y: hidden; /* Hide vertical scroll for editor by default */
+}
+
+/* When generator is active, let the body scroll vertically */
+body.generator-active {
+    height: auto;
+    overflow-y: visible;
+}
+
+body.generator-active main {
+    height: auto;
+}
+
+body.generator-active .container {
+    overflow: visible;
+    flex-grow: initial; /* Don't force container to fill viewport height */
+}
+
+body.generator-active .content-views {
+    flex-grow: initial; /* Let the content views size naturally */
+    min-height: initial;
+}
+
+
+body.is-dragging,
+body.is-resizing {
+    user-select: none;
+}
+body.is-dragging {
+    cursor: grabbing;
+}
+body.is-resizing-v {
+    cursor: col-resize;
+}
+body.is-resizing-h {
+    cursor: row-resize;
+}
+body.is-dragging-overlay {
+    cursor: move;
+    user-select: none;
+}

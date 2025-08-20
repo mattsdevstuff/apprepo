@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import * as admin from 'firebase-admin';
+
 admin.initializeApp({
   credential: admin.credential.cert({
     privateKey: process.env.APP_FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
@@ -25,6 +26,24 @@ app.get('/', (req, res) => {
     res.redirect(`${frontendUrl}/?token=${token}`);
   } else {
     res.send('Backend is running. No token found.');
+  }
+});
+
+app.get('/credits', async (req, res) => {
+  const authorization = req.headers.authorization;
+  if (!authorization || !authorization.startsWith('Bearer ')) {
+    return res.status(401).send('Unauthorized');
+  }
+  const token = authorization.split('Bearer ')[1];
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const uid = decodedToken.uid;
+    const userRecord = await admin.auth().getUser(uid);
+    const credits = (userRecord.customClaims && userRecord.customClaims.credits) || 0;
+    res.status(200).json({ credits });
+  } catch (error) {
+    console.error('Error fetching credits:', error);
+    res.status(500).send('Internal Server Error');
   }
 });
 

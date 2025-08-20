@@ -24,10 +24,17 @@ export const generateText = onCall(async (request) => {
   
     try {
       const result = await generativeModel.generateContent(prompt);
+      if (!result.response.candidates || result.response.candidates.length === 0) {
+        throw new Error('No candidates received from the model.');
+      }
       const text = result.response.candidates[0].content.parts[0].text;
+      if (!text) {
+        throw new Error('No text received from the model.');
+      }
       return { text };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error generating text with Vertex AI:', error);
-      throw new HttpsError('internal', 'Failed to generate text.', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      throw new HttpsError('internal', `Failed to generate text: ${errorMessage}`);
     }
   });

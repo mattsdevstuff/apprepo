@@ -4,6 +4,7 @@ import {
     httpsCallable,
   } from 'firebase/functions';
 import { app } from './firebaseConfig';
+import { getAuth } from "firebase/auth";
 
 const functions = getFunctions(app);
 
@@ -89,4 +90,23 @@ export async function generatePromptApi(idea: string): Promise<string> {
         console.error("[BFF] Text Generation API Call failed.", error);
         throw error;
     }
+}
+
+export async function getCredits(): Promise<number> {
+    const auth = getAuth(app);
+    const user = auth.currentUser;
+    if (!user) {
+        throw new Error("User not authenticated");
+    }
+    const token = await user.getIdToken();
+    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/credits`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        throw new Error("Failed to fetch credits");
+    }
+    const data = await response.json();
+    return data.credits;
 }

@@ -85,6 +85,12 @@ export function closeSettingsModal() {
     }
 }
 
+export function closeCreditsModal() {
+    if (DOM.creditsModal) {
+        DOM.creditsModal.style.display = 'none';
+    }
+}
+
 export function saveSettings() {
     if (DOM.settingDuration) {
         const newDuration = parseInt(DOM.settingDuration.value, 10);
@@ -107,6 +113,24 @@ export function closeErrorModal() {
     if (DOM.errorModal) {
         DOM.errorModal.style.display = 'none';
     }
+}
+
+export function initUI() {
+    // Simple dropdown toggle for user profile
+    DOM.userProfileTrigger?.addEventListener('click', () => {
+        if (DOM.userProfileDropdown) {
+            const isExpanded = DOM.userProfileDropdown.style.display === 'block';
+            DOM.userProfileDropdown.style.display = isExpanded ? 'none' : 'block';
+        }
+    });
+
+    DOM.buyCreditsButton?.addEventListener('click', () => {
+        if (DOM.creditsModal) {
+            DOM.creditsModal.style.display = 'flex';
+        }
+    });
+
+    DOM.creditsCancelButton?.addEventListener('click', closeCreditsModal);
 }
 
 // --- Resizer Logic ---

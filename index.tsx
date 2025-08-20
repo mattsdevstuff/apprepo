@@ -13,12 +13,13 @@ import { handleSelectOverlay } from './selection';
 import * as State from './state';
 import { initTimeline, updateTimelineUI, repackClips } from './timeline';
 import { initTools } from './tools';
-import { switchView, initResizers, openSettingsModal, saveSettings, closeSettingsModal, closeErrorModal, updateStudioNotification } from './ui';
+import { initUI, switchView, initResizers, openSettingsModal, saveSettings, closeSettingsModal, closeErrorModal, updateStudioNotification } from './ui';
 
 window.addEventListener('DOMContentLoaded', () => {
     document.title = 'AI YouTube Shorts Creator';
 
     // --- Initializations ---
+    initUI();
     initAuth();
     initGenerator();
     initMediaBin();

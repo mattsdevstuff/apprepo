@@ -2,7 +2,7 @@
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirestore } from 'firebase-admin/firestore';
 import { GoogleAuth } from 'google-auth-library';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 const PROJECT_ID = process.env.GCLOUD_PROJECT || "app-project-468120";
 const LOCATION_ID = 'us-central1';
@@ -16,6 +16,13 @@ async function getAccessToken() {
   const client = await auth.getClient();
   const accessToken = await client.getAccessToken();
   return accessToken.token;
+}
+
+interface Instance {
+    prompt: string;
+    image?: {
+        bytesBase64Encoded: string;
+    };
 }
 
 export const startVideoGeneration = onCall(async (request) => {
@@ -37,9 +44,9 @@ export const startVideoGeneration = onCall(async (request) => {
     const url = `https://${API_ENDPOINT}/v1/projects/${PROJECT_ID}/locations/${LOCATION_ID}/publishers/google/models/${MODEL_ID}:predictLongRunning`;
 
     // Construct the instance payload, adding the image if it exists
-    const instance = { prompt };
+    const instance: Instance = { prompt };
     if (imageBase64 && typeof imageBase64 === 'string') {
-        instance['image'] = { bytesBase64Encoded: imageBase64 };
+        instance.image = { bytesBase64Encoded: imageBase64 };
     }
 
     const requestBody = {
@@ -79,10 +86,16 @@ export const startVideoGeneration = onCall(async (request) => {
 
     return { operationId };
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error starting video generation:', error);
-    const errorMessage = error.response?.data?.error?.message || error.message;
-    throw new HttpsError('internal', `Failed to start video generation: ${errorMessage}`, error);
+    let errorMessage = 'An unknown error occurred.';
+    if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<any>;
+        errorMessage = axiosError.response?.data?.error?.message || axiosError.message;
+    } else if (error instanceof Error) {
+        errorMessage = error.message;
+    }
+    throw new HttpsError('internal', `Failed to start video generation: ${errorMessage}`);
   }
 });
 
@@ -109,9 +122,15 @@ export const checkVideoGenerationStatus = onCall(async (request) => {
       
       return response.data;
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error checking video generation status:', error);
-      const errorMessage = error.response?.data?.error?.message || error.message;
-      throw new HttpsError('internal', `Failed to check video generation status: ${errorMessage}`, error);
+      let errorMessage = 'An unknown error occurred.';
+      if (axios.isAxiosError(error)) {
+          const axiosError = error as AxiosError<any>;
+          errorMessage = axiosError.response?.data?.error?.message || axiosError.message;
+      } else if (error instanceof Error) {
+          errorMessage = error.message;
+      }
+      throw new HttpsError('internal', `Failed to check video generation status: ${errorMessage}`);
     }
   });

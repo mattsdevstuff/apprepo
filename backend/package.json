@@ -17,5 +17,9 @@
     "express": "^5.1.0",
     "firebase-admin": "^13.4.0",
     "googleapis": "^155.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "typescript": "^5.5.2"
   }
 }
