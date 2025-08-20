@@ -6,9 +6,11 @@
 import { generateContentApi, generatePromptApi } from './api';
 import * as DOM from './dom';
 import * as State from './state';
-import { GeneratedVideo, SavedClip } from './types';
+import { SavedClip } from './types';
 import { setUILoading, displayError, updateStudioNotification } from './ui';
 import { blobToBase64 } from './utils';
+import { getAuth } from 'firebase/auth';
+import { app } from './firebaseConfig';
 
 function createVideoCard(savedClip: SavedClip): HTMLDivElement {
     const videoContainer = document.createElement('div');
@@ -66,7 +68,7 @@ function createVideoCard(savedClip: SavedClip): HTMLDivElement {
     return videoContainer;
 }
 
-async function handleGenerationSuccess(videos: GeneratedVideo[]) {
+async function handleGenerationSuccess(videos: any[]) {
     if (DOM.galleryPlaceholder) DOM.galleryPlaceholder.style.display = 'none';
     
     if (DOM.statusEl) {
@@ -81,13 +83,14 @@ async function handleGenerationSuccess(videos: GeneratedVideo[]) {
 
     for (const v of videos) {
         try {
-            const uri = v.video?.uri;
-            if (!uri) {
-                throw new Error(`Video is missing a URI.`);
+            const base64String = v.bytesBase64Encoded;
+            if (!base64String) {
+                throw new Error(`Video is missing base64 data.`);
             }
 
-            const url = decodeURIComponent(uri);
-            const res = await fetch(url);
+            const dataUrl = `data:video/mp4;base64,${base64String}`;
+            const res = await fetch(dataUrl);
+
             if (!res.ok) throw new Error(`Failed to fetch video: ${res.statusText}`);
             const blob = await res.blob();
             const objectURL = URL.createObjectURL(blob);
@@ -128,6 +131,12 @@ async function handleGenerateIdeasClick() {
     if (DOM.generateIdeasButton) DOM.generateIdeasButton.innerHTML = '<div class="loader"></div> Generating...';
 
     try {
+        const auth = getAuth(app);
+        const user = auth.currentUser;
+        if (!user) {
+            alert('You must be signed in to generate ideas.');
+            return;
+        }
         const generatedPrompt = await generatePromptApi(idea);
         if (DOM.promptEl) {
             DOM.promptEl.value = generatedPrompt;
@@ -147,24 +156,34 @@ async function handleGenerateIdeasClick() {
 }
 
 async function handleGenerateClick() {
-  if (!DOM.promptEl?.value.trim()) {
-    alert('Please enter a prompt.');
-    return;
+    if (!DOM.promptEl?.value.trim()) {
+      alert('Please enter a prompt.');
+      return;
+    }
+    setUILoading(true);
+    if (DOM.quotaErrorEl) DOM.quotaErrorEl.style.display = 'none';
+  
+    try {
+      const videos = await generateContentApi(
+        DOM.promptEl.value,
+        State.imageBase64,
+        State.projectAspectRatio, 
+        (status) => {
+            const statusPara = DOM.statusEl?.querySelector('p');
+            if (statusPara) {
+                statusPara.textContent = status;
+            }
+        }
+      );
+      await handleGenerationSuccess(videos);
+    } catch (e) {
+      console.error(e);
+      const message = e instanceof Error ? e.message : String(e);
+      displayError(message);
+    } finally {
+      setUILoading(false);
+    }
   }
-  setUILoading(true);
-  if (DOM.quotaErrorEl) DOM.quotaErrorEl.style.display = 'none';
-
-  try {
-    const videos = await generateContentApi(DOM.promptEl.value, State.imageBase64, State.projectAspectRatio);
-    await handleGenerationSuccess(videos);
-  } catch (e) {
-    console.error(e);
-    const message = e instanceof Error ? e.message : String(e);
-    displayError(message);
-  } finally {
-    setUILoading(false);
-  }
-}
 
 async function handleFileInputChange(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
