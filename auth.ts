@@ -20,10 +20,11 @@ async function showSignedIn(user: any) {
     DOM.userProfilePictureEl.src = user.photoURL;
     try {
         const credits = await getCredits();
-        DOM.creditBalanceDisplay.textContent = `Credits: ${credits}`;
+        console.log("Credits received:", credits);
+        DOM.creditBalanceDisplay.innerHTML = `<i class="fa-solid fa-coins"></i> ${credits}`;
     } catch (error) {
         console.error("Error fetching credits:", error);
-        DOM.creditBalanceDisplay.textContent = "Credits: --";
+        DOM.creditBalanceDisplay.innerHTML = `<i class="fa-solid fa-coins"></i> --`;
     }
 }
 

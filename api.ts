@@ -4,14 +4,15 @@ import {
     httpsCallable,
   } from 'firebase/functions';
 import { app } from './firebaseConfig';
-import { getAuth } from "firebase/auth";
 
 const functions = getFunctions(app);
 
 // Callable functions
 const startVideoGeneration = httpsCallable(functions, 'startVideoGeneration');
 const checkVideoGenerationStatus = httpsCallable(functions, 'checkVideoGenerationStatus');
-const generateText = httpsCallable(functions, 'generateText'); // Assuming a function named 'generateText'
+const generateText = httpsCallable(functions, 'generateText');
+const getCreditsFunction = httpsCallable(functions, 'getCredits');
+
 
 async function poll(operationName: string, onProgress: (status: string) => void): Promise<any> {
     let result: any;
@@ -93,20 +94,11 @@ export async function generatePromptApi(idea: string): Promise<string> {
 }
 
 export async function getCredits(): Promise<number> {
-    const auth = getAuth(app);
-    const user = auth.currentUser;
-    if (!user) {
-        throw new Error("User not authenticated");
-    }
-    const token = await user.getIdToken();
-    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/credits`, {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    });
-    if (!response.ok) {
+    try {
+        const { data } = await getCreditsFunction();
+        return (data as any).credits as number;
+    } catch (error) {
+        console.error("Error fetching credits via callable function:", error);
         throw new Error("Failed to fetch credits");
     }
-    const data = await response.json();
-    return data.credits;
 }

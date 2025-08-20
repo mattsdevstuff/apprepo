@@ -117,11 +117,9 @@ export function closeErrorModal() {
 
 export function initUI() {
     // Simple dropdown toggle for user profile
-    DOM.userProfileTrigger?.addEventListener('click', () => {
-        if (DOM.userProfileDropdown) {
-            const isExpanded = DOM.userProfileDropdown.style.display === 'block';
-            DOM.userProfileDropdown.style.display = isExpanded ? 'none' : 'block';
-        }
+    DOM.userProfileTrigger?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        DOM.userProfileDropdown?.classList.toggle('show');
     });
 
     DOM.buyCreditsButton?.addEventListener('click', () => {
@@ -131,6 +129,18 @@ export function initUI() {
     });
 
     DOM.creditsCancelButton?.addEventListener('click', closeCreditsModal);
+
+    window.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).classList.contains('modal')) {
+            closeSettingsModal();
+            closeCreditsModal();
+            closeErrorModal();
+        }
+
+        if (!DOM.userProfileTrigger?.contains(e.target as Node) && !DOM.userProfileDropdown?.contains(e.target as Node)) {
+            DOM.userProfileDropdown?.classList.remove('show');
+        }
+    });
 }
 
 // --- Resizer Logic ---

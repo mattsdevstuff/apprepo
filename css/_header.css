@@ -1,3 +1,4 @@
+/* Header */
 .app-header {
   position: fixed;
   top: 0;
@@ -19,17 +20,16 @@
   display: flex;
   align-items: center;
 }
-
 .header-auth-status {
   display: flex;
   align-items: center;
   gap: 1.5rem;
 }
-
 .auth-section {
   display: flex; /* Ensure the auth section uses flexbox for button alignment */
   gap: 1rem;
 }
+
 
 .user-actions {
     display: flex;
@@ -174,7 +174,6 @@
     color: var(--text-muted-color);
     transition: color 0.2s;
 }
-
 .dropdown-item:hover i {
     color: var(--text-color);
 }
