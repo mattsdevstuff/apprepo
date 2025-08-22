@@ -1,9 +1,11 @@
+
 /**
  * @license
  * Copyright 2025 Google LLC
  * SPDX-License-Identifier: Apache-2.0
  */
 import { initAuth } from './auth';
+import { initBilling } from './billing';
 import * as DOM from './dom';
 import { initGenerator } from './generator';
 import { initMediaBin } from './mediaBin';
@@ -13,28 +15,67 @@ import { handleSelectOverlay } from './selection';
 import * as State from './state';
 import { initTimeline, updateTimelineUI, repackClips } from './timeline';
 import { initTools } from './tools';
-import { initUI, switchView, initResizers, openSettingsModal, saveSettings, closeSettingsModal, closeErrorModal, updateStudioNotification } from './ui';
+import { initUI, initResizers, openSettingsModal, saveSettings, closeSettingsModal, closeErrorModal, switchTool, openCreditsModal } from './ui';
+import { initAutoVoiceover } from './autovoiceover';
+
+function initMobileEditorNav() {
+    const navButtons = document.querySelectorAll<HTMLButtonElement>('.mobile-editor-nav .mobile-nav-btn');
+    const editorPanels = document.querySelectorAll<HTMLDivElement>('.editor-body .editor-panel');
+
+    navButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const targetPanelName = button.dataset.panel;
+            
+            // Update button active state
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            
+            // Show/hide panels
+            editorPanels.forEach(panel => {
+                if (panel.dataset.panelName === targetPanelName) {
+                    panel.classList.add('mobile-active');
+                } else {
+                    panel.classList.remove('mobile-active');
+                }
+            });
+        });
+    });
+}
+
+function initDashboard() {
+    const toolCards = document.querySelectorAll<HTMLDivElement>('.tool-card');
+    toolCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const targetTool = card.dataset.toolTarget as 'video-creator' | 'auto-voiceover' | 'video-editor';
+            if (targetTool) {
+                switchTool(targetTool);
+            }
+        });
+    });
+
+    DOM.dashboardBuyCreditsButton?.addEventListener('click', openCreditsModal);
+}
 
 window.addEventListener('DOMContentLoaded', () => {
-    document.title = 'AI YouTube Shorts Creator';
+    document.title = 'AI YouTube Video Creator';
 
     // --- Initializations ---
+    initDashboard();
     initUI();
     initAuth();
+    initBilling();
     initGenerator();
+    initAutoVoiceover();
     initMediaBin();
     initPreview();
     initPropertiesPanel();
     initTimeline();
     initTools();
     initResizers();
+    initMobileEditorNav();
 
     // --- Global Event Listeners (Orchestration) ---
 
-    // Tab Switching
-    DOM.generatorTabButton?.addEventListener('click', () => switchView('generator-view'));
-    DOM.studioTabButton?.addEventListener('click', () => switchView('editor-view'));
-    
     // Playback Control
     DOM.playPauseButton?.addEventListener('click', () => {
         if (!DOM.videoPreview) return;
@@ -83,8 +124,6 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     
     // Track Management
-    DOM.addVideoTrackButton?.addEventListener('click', () => State.addTrack('video'));
-    DOM.addTextTrackButton?.addEventListener('click', () => State.addTrack('text'));
     DOM.timelineTrackHeaders?.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
         if (target.classList.contains('delete-track-btn')) {
@@ -108,6 +147,5 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
     // --- Final Setup ---
-    updateStudioNotification();
-    switchView('generator-view');
+    document.body.classList.add('generator-active'); // Set initial state
 });

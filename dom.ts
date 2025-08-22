@@ -1,3 +1,5 @@
+
+
 /**
  * @license
  * Copyright 2025 Google LLC
@@ -6,10 +8,16 @@
 
 // --- DOM Element References ---
 
-// Tabs & Header
-export const generatorTabButton = document.querySelector<HTMLButtonElement>('#generator-tab-button');
-export const studioTabButton = document.querySelector<HTMLButtonElement>('#studio-tab-button');
-export const studioNotificationBadge = document.querySelector<HTMLSpanElement>('#studio-notification-badge');
+// Main Views
+export const dashboardToolView = document.querySelector<HTMLDivElement>('#dashboard-tool-view');
+export const videoCreatorToolView = document.querySelector<HTMLDivElement>('#video-creator-tool-view');
+export const autoVoiceoverToolView = document.querySelector<HTMLDivElement>('#auto-voiceover-tool-view');
+export const videoEditorToolView = document.querySelector<HTMLDivElement>('#video-editor-tool-view');
+
+// Sidebar Navigation
+export const sidebar = document.querySelector<HTMLElement>('#sidebar');
+export const sidebarToggle = document.querySelector<HTMLButtonElement>('#sidebar-toggle');
+export const navLinks = document.querySelectorAll<HTMLButtonElement>('.nav-link');
 
 // Auth
 export const headerAuthStatus = document.querySelector<HTMLDivElement>('.header-auth-status');
@@ -23,6 +31,14 @@ export const userProfilePictureEl = document.querySelector<HTMLImageElement>('#u
 export const signOutButton = document.querySelector<HTMLButtonElement>('#sign-out-button');
 export const creditBalanceDisplay = document.querySelector<HTMLDivElement>('#credit-balance-display');
 export const buyCreditsButton = document.querySelector<HTMLButtonElement>('#buy-credits-button');
+
+// Dashboard
+export const dashboardUserInfo = document.querySelector<HTMLDivElement>('#dashboard-user-info');
+export const dashboardUserProfilePicture = document.querySelector<HTMLImageElement>('#dashboard-user-profile-picture');
+export const dashboardUserName = document.querySelector<HTMLHeadingElement>('#dashboard-user-name');
+export const dashboardUserEmail = document.querySelector<HTMLParagraphElement>('#dashboard-user-email');
+export const dashboardCreditBalance = document.querySelector<HTMLDivElement>('#dashboard-credit-balance');
+export const dashboardBuyCreditsButton = document.querySelector<HTMLButtonElement>('#dashboard-buy-credits-button');
 
 // Generator View
 export const generatorView = document.querySelector<HTMLDivElement>('#generator-view');
@@ -39,6 +55,30 @@ export const statusEl = document.querySelector<HTMLDivElement>('#status');
 export const resultsGallery = document.querySelector<HTMLDivElement>('#results-gallery');
 export const galleryPlaceholder = document.querySelector<HTMLDivElement>('#gallery-placeholder');
 export const quotaErrorEl = document.querySelector<HTMLDivElement>('#quota-error');
+
+// Auto Voiceover View
+export const voiceoverUploadTab = document.querySelector<HTMLButtonElement>('#voiceover-upload-tab');
+export const voiceoverUrlTab = document.querySelector<HTMLButtonElement>('#voiceover-url-tab');
+export const voiceoverUploadContent = document.querySelector<HTMLDivElement>('#voiceover-upload-content');
+export const voiceoverUrlContent = document.querySelector<HTMLDivElement>('#voiceover-url-content');
+export const voiceoverFileInput = document.querySelector<HTMLInputElement>('#voiceover-file-input');
+export const voiceoverFileDropZone = document.querySelector<HTMLLabelElement>('.file-drop-zone');
+export const voiceoverFileName = document.querySelector<HTMLDivElement>('#voiceover-file-name');
+export const voiceoverUrlInput = document.querySelector<HTMLInputElement>('#voiceover-url-input');
+export const voiceoverPreviewVideo = document.querySelector<HTMLVideoElement>('#voiceover-preview-video');
+export const voiceoverPreviewPlaceholder = document.querySelector<HTMLDivElement>('#voiceover-preview-placeholder');
+export const generateVoiceoverButton = document.querySelector<HTMLButtonElement>('#generate-voiceover-button');
+export const voiceoverMainPanel = document.querySelector<HTMLDivElement>('#voiceover-main-panel');
+export const voiceoverActionPanel = document.querySelector<HTMLDivElement>('#voiceover-action-panel');
+export const voiceoverProcessingPanel = document.querySelector<HTMLDivElement>('#voiceover-processing-panel');
+export const voiceoverProcessingVideo = document.querySelector<HTMLVideoElement>('#voiceover-processing-video');
+export const voiceoverStatusMessage = document.querySelector<HTMLDivElement>('#voiceover-status-message');
+export const voiceoverResultsPanel = document.querySelector<HTMLDivElement>('#voiceover-results-panel');
+export const voiceoverFinalVideo = document.querySelector<HTMLVideoElement>('#voiceover-final-video');
+export const voiceoverDownloadButton = document.querySelector<HTMLAnchorElement>('#voiceover-download-button');
+export const voiceoverStartOverButton = document.querySelector<HTMLButtonElement>('#voiceover-start-over-button');
+export const voiceoverGeneratedScript = document.querySelector<HTMLDivElement>('#voiceover-generated-script');
+
 
 // Editor View
 export const editorView = document.querySelector<HTMLDivElement>('#editor-view');
@@ -111,6 +151,7 @@ export const errorModalClose = document.querySelector<HTMLButtonElement>('#error
 export const creditsModal = document.querySelector<HTMLDivElement>('#credits-modal');
 export const creditsCancelButton = document.querySelector<HTMLButtonElement>('#credits-cancel-button');
 export const buyButtons = document.querySelectorAll<HTMLButtonElement>('.buy-button');
+export const modalCreditBalanceDisplay = document.querySelector<HTMLDivElement>('#modal-credit-balance-display');
 
 
 // Resizers

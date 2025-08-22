@@ -1,3 +1,4 @@
+
 /**
  * @license
  * Copyright 2025 Google LLC
@@ -7,7 +8,7 @@ import { generateContentApi, generatePromptApi } from './api';
 import * as DOM from './dom';
 import * as State from './state';
 import { SavedClip } from './types';
-import { setUILoading, displayError, updateStudioNotification } from './ui';
+import { setUILoading, displayError } from './ui';
 import { blobToBase64 } from './utils';
 import { getAuth } from 'firebase/auth';
 import { app } from './firebaseConfig';
@@ -52,7 +53,6 @@ function createVideoCard(savedClip: SavedClip): HTMLDivElement {
         if (!State.savedClips.some(c => c.id === savedClip.id)) {
             State.addSavedClip(savedClip);
             State.incrementNewClipsCount();
-            updateStudioNotification();
         }
         
         document.querySelectorAll(`.add-to-editor-btn[data-clip-id='${savedClip.id}']`).forEach(btn => {

@@ -1,3 +1,6 @@
+
+
+
 /**
  * @license
  * Copyright 2025 Google LLC
@@ -42,33 +45,37 @@ export function displayError(message: string) {
     if (DOM.errorModal) DOM.errorModal.style.display = 'flex';
 }
 
-export function switchView(viewId: 'generator-view' | 'editor-view') {
-  if (viewId === 'generator-view') {
-    if (DOM.generatorView) DOM.generatorView.style.display = 'block';
-    if (DOM.editorView) DOM.editorView.style.display = 'none';
-    DOM.generatorTabButton?.classList.add('active');
-    DOM.studioTabButton?.classList.remove('active');
-  } else {
-    if (DOM.generatorView) DOM.generatorView.style.display = 'none';
-    if (DOM.editorView) DOM.editorView.style.display = 'flex';
-    DOM.generatorTabButton?.classList.remove('active');
-    DOM.studioTabButton?.classList.add('active');
-    State.resetNewClipsCount();
-    updateStudioNotification();
-    renderMediaBin();
-    renderTimelineTracks();
-  }
-  document.body.classList.toggle('generator-active', viewId === 'generator-view');
+export function updateDashboardStats(credits: number) {
+    if (DOM.dashboardCreditBalance) {
+        DOM.dashboardCreditBalance.innerHTML = `<i class="fa-solid fa-coins"></i> ${credits}`;
+    }
 }
 
-export function updateStudioNotification() {
-  if (!DOM.studioNotificationBadge) return;
-  if (State.newClipsCount > 0) {
-    DOM.studioNotificationBadge.style.display = 'block';
-    DOM.studioNotificationBadge.textContent = String(State.newClipsCount);
-  } else {
-    DOM.studioNotificationBadge.style.display = 'none';
-  }
+export function switchTool(tool: 'dashboard' | 'video-creator' | 'auto-voiceover' | 'video-editor') {
+    if (!DOM.dashboardToolView || !DOM.videoCreatorToolView || !DOM.autoVoiceoverToolView || !DOM.videoEditorToolView) return;
+
+    // Hide all views first
+    DOM.dashboardToolView.style.display = 'none';
+    DOM.videoCreatorToolView.style.display = 'none';
+    DOM.autoVoiceoverToolView.style.display = 'none';
+    DOM.videoEditorToolView.style.display = 'none';
+
+    if (tool === 'dashboard') {
+        DOM.dashboardToolView.style.display = 'block';
+    } else if (tool === 'video-creator') {
+        DOM.videoCreatorToolView.style.display = 'block';
+    } else if (tool === 'auto-voiceover') {
+        DOM.autoVoiceoverToolView.style.display = 'block';
+    } else if (tool === 'video-editor') {
+        DOM.videoEditorToolView.style.display = 'flex';
+        State.resetNewClipsCount();
+        renderMediaBin();
+        renderTimelineTracks();
+    }
+
+    DOM.navLinks?.forEach(item => {
+        item.classList.toggle('active', item.getAttribute('data-tool') === tool);
+    });
 }
 
 // --- Modals ---
@@ -85,9 +92,37 @@ export function closeSettingsModal() {
     }
 }
 
+export function openCreditsModal() {
+    if (DOM.creditsModal) {
+        // Handle credit balance display
+        if (DOM.userActions?.style.display === 'flex' && DOM.creditBalanceDisplay && DOM.modalCreditBalanceDisplay) {
+            DOM.modalCreditBalanceDisplay.innerHTML = DOM.creditBalanceDisplay.innerHTML;
+            DOM.modalCreditBalanceDisplay.style.display = 'flex';
+        } else if (DOM.modalCreditBalanceDisplay) {
+            DOM.modalCreditBalanceDisplay.style.display = 'none';
+        }
+
+        DOM.creditsModal.style.display = 'flex';
+        // Use a microtask delay to ensure the display property is applied before adding the class
+        queueMicrotask(() => {
+            DOM.creditsModal?.classList.add('show');
+        });
+    }
+}
+
+
 export function closeCreditsModal() {
     if (DOM.creditsModal) {
-        DOM.creditsModal.style.display = 'none';
+        DOM.creditsModal.classList.remove('show');
+        // Set display to none after the transition ends
+        const handleTransitionEnd = (event: TransitionEvent) => {
+            // Ensure we only trigger on the overlay's transition, not its children
+            if (event.target === DOM.creditsModal && !DOM.creditsModal?.classList.contains('show')) {
+                DOM.creditsModal.style.display = 'none';
+                DOM.creditsModal.removeEventListener('transitionend', handleTransitionEnd);
+            }
+        };
+        DOM.creditsModal.addEventListener('transitionend', handleTransitionEnd);
     }
 }
 
@@ -116,29 +151,63 @@ export function closeErrorModal() {
 }
 
 export function initUI() {
-    // Simple dropdown toggle for user profile
+    // Sidebar Toggle
+    DOM.sidebarToggle?.addEventListener('click', () => {
+        DOM.sidebar?.classList.toggle('collapsed');
+        const isCollapsed = DOM.sidebar?.classList.contains('collapsed');
+        const toggleIcon = DOM.sidebarToggle?.querySelector('i');
+        if (toggleIcon) {
+            toggleIcon.className = isCollapsed ? 'fa-solid fa-chevron-right' : 'fa-solid fa-chevron-left';
+        }
+    });
+
+    // Tool navigation
+    DOM.navLinks?.forEach(link => {
+        link.addEventListener('click', () => {
+            const tool = link.dataset.tool as 'dashboard' | 'video-creator' | 'auto-voiceover' | 'video-editor';
+            if (tool) {
+                switchTool(tool);
+            }
+        });
+    });
+
+    // User profile dropdown
     DOM.userProfileTrigger?.addEventListener('click', (e) => {
         e.stopPropagation();
+        const isOpening = !DOM.userProfileDropdown?.classList.contains('show');
         DOM.userProfileDropdown?.classList.toggle('show');
+        DOM.userProfileTrigger.setAttribute('aria-expanded', String(isOpening));
     });
 
-    DOM.buyCreditsButton?.addEventListener('click', () => {
-        if (DOM.creditsModal) {
-            DOM.creditsModal.style.display = 'flex';
-        }
-    });
-
-    DOM.creditsCancelButton?.addEventListener('click', closeCreditsModal);
+    DOM.buyCreditsButton?.addEventListener('click', openCreditsModal);
 
     window.addEventListener('click', (e) => {
-        if ((e.target as HTMLElement).classList.contains('modal')) {
-            closeSettingsModal();
-            closeCreditsModal();
-            closeErrorModal();
-        }
+        const target = e.target as HTMLElement;
 
-        if (!DOM.userProfileTrigger?.contains(e.target as Node) && !DOM.userProfileDropdown?.contains(e.target as Node)) {
+        // Generic modal closer using data-attribute
+        if (target.hasAttribute('data-close-modal')) {
+             if (DOM.creditsModal?.classList.contains('show')) {
+                closeCreditsModal();
+             }
+        }
+        
+        // Handling for simpler modals without animation
+        if (target === DOM.settingsModal) closeSettingsModal();
+        if (target === DOM.errorModal) closeErrorModal();
+
+        // Close dropdowns if click is outside
+        if (!DOM.userProfileTrigger?.contains(target) && !DOM.userProfileDropdown?.contains(target)) {
             DOM.userProfileDropdown?.classList.remove('show');
+            DOM.userProfileTrigger?.setAttribute('aria-expanded', 'false');
+        }
+    });
+    
+    // Add escape key listener for all modals
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (DOM.settingsModal?.style.display !== 'none') closeSettingsModal();
+            if (DOM.creditsModal?.classList.contains('show')) closeCreditsModal();
+            if (DOM.errorModal?.style.display !== 'none') closeErrorModal();
         }
     });
 }
