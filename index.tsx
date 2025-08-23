@@ -57,7 +57,7 @@ function initDashboard() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    document.title = 'AI YouTube Video Creator';
+    document.title = 'AI Studio';
 
     // --- Initializations ---
     initDashboard();
